@@ -1,0 +1,15 @@
+id: RES-01
+title: 연구원 — 애플리케이션 보안 운영 직무 확장 후보
+role: researcher
+type: extension
+chapter: 14
+prompt: app-sec-ops 직무의 확장 스킬 후보를 하나 만들어 주세요. 채용공고와 최신 자료를 근거로 하세요.
+fixtures: {}
+expect:
+  skills_required:
+  - research-to-skill
+  file_written: candidates/
+  answer_must:
+  - 결론
+  - 근거
+  - 한계

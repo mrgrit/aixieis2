@@ -1,0 +1,204 @@
+id: SOC-02
+title: IPS가 탐지한 TCP SYN Flooding (임계치 200 대 25,000 PPS)
+role: soc-analyst
+type: verify
+chapter: 12
+ncs: 보안로그 분석 학습 1-2 <표 1-17>
+exam: 2025 과정평가 보안로그분석 문항1
+live_inject:
+- load_conn_exhaust
+prompt: 14시쯤 IPS에서 neobank(10.20.40.11) 대상 TCP Syn Flooding Critical 경보가 연속으로 떴습니다. 정탐인지 오탐인지 판정하고, 공격 기법·공격 원리·피해
+  예상을 보안사고 분석 요약으로 정리해 주세요.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  network_topology:
+    path_web: ext(10.20.30.0/24) → fw → pipe(10.20.31.0/24) → ips → dmz(10.20.32.0/24, web=WAF) → int(10.20.40.0/24)
+    zones:
+    - zone: ext
+      cidr: 10.20.30.0/24
+      trust: L0
+      note: 인터넷 접점, 공격자 단말
+    - zone: pipe
+      cidr: 10.20.31.0/24
+      trust: L1
+      note: fw–ips 사이, 통과 트래픽만
+    - zone: dmz
+      cidr: 10.20.32.0/24
+      trust: L2
+      note: WAF, SIEM, 관리 포털
+    - zone: int
+      cidr: 10.20.40.0/24
+      trust: L3
+      note: 업무 앱 백엔드, WAF 경유만
+    - zone: app
+      cidr: 10.20.50.0/24
+      trust: L3
+      note: GPU 존
+    - zone: ot
+      cidr: 10.20.60.0/24
+      trust: L3 격리
+      note: 시설망, tcp/8000·ICMP만
+    - zone: mgmt
+      cidr: '-'
+      trust: 논리
+      note: 별도 망 없음, 권한 경계
+  policy_docs:
+  - doc: POL-IR-01 침해사고 대응 절차
+    steps:
+    - 인지
+    - 판단(정탐·오탐)
+    - '초기대응: 후속 공격 차단(선 조치 후 보고 허용 범위: 출발지 IP 단일 차단)'
+    - 이해관계자 통보(대상 시스템 운영 담당, 네트워크 책임자, 정보보호팀)
+    - 침해 범위 확인
+    - 침해 이력 기록
+    - 정보시스템 보호(격리는 CISO 승인)
+    note: 격리 대상 시스템은 전원이 켜진 상태로 격리한다(증거 보전)
+  ids_rules:
+  - sid: 1000201
+    name: TCP Syn Flooding Attack
+    group: DoS
+    pattern: 단위시간당 SYN 패킷 유입
+    threshold: 200 pps
+    action: drop
+  log_read:
+    ips:
+    - time: '2026-10-18T14:00:01+09:00'
+      idx: 1022
+      type: DoS
+      src_ip: 203.0.113.10
+      dst_ip: 10.20.40.11
+      sig: TCP Syn Flooding Attack
+      pps: 25000
+      action: drop
+    - time: '2026-10-18T14:00:01+09:00'
+      idx: 1023
+      type: DoS
+      src_ip: 203.0.113.12
+      dst_ip: 10.20.40.11
+      sig: TCP Syn Flooding Attack
+      pps: 24500
+      action: drop
+    - time: '2026-10-18T14:00:02+09:00'
+      idx: 1024
+      type: DoS
+      src_ip: 203.0.113.15
+      dst_ip: 10.20.40.11
+      sig: TCP Syn Flooding Attack
+      pps: 26000
+      action: drop
+    fw:
+    - time: '2026-10-18T14:00:00+09:00'
+      src_ip: 203.0.113.0/24
+      dst: 10.20.32.80
+      dport: 443
+      conn_rate: 급증
+      action: accept
+    web:
+    - time: '2026-10-18T14:00:30+09:00'
+      uri: /
+      status: 503
+      note: 응답 지연·일부 실패
+  siem_search:
+  - time: '2026-10-18T14:00:01+09:00'
+    rule: IPS TCP Syn Flooding
+    level: 12
+    src_ip: 203.0.113.10
+expect:
+  skills_required:
+  - ncs-log-12-analysis
+  tools_required:
+  - log_read
+  answer_must:
+  - 정탐
+  - '200'
+  - 결론
+  - 근거
+  - 한계
+  answer_any:
+  - - 25,000
+    - '25000'
+    - 2만 5천
+  - - SYN
+  - - 가용성
+    - 서비스 거부
+    - 지연
+variants:
+- id: V1
+  description: '피해 예상 형식 지정: ''가용성 영향 / 업무 영향 / 지속 시간'' 세 항목.'
+  ops:
+  - file: .claude/skills/ncs-log-12-analysis/SKILL.md
+    find: '## 산출물'
+    replace: '## 피해 예상 쓰는 법
+
+
+      피해 예상은 `가용성 영향`, `업무 영향`, `지속 시간` 세 항목으로 나눠 쓴다.
+
+
+      ## 산출물'
+  expect:
+    answer_must:
+    - 가용성 영향
+    - 업무 영향
+    - 지속 시간
+  expect_diff: 같은 판정에서 보고서 구조만 바뀐다.

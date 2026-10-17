@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""org/ 정합성 검사 — 에이전트·스킬·랩 권한이 서로 맞는지 본다.
+
+  bin/check          문제 목록과 요약
+  bin/check --quiet  문제만
+
+검사 항목
+  A1 에이전트 frontmatter: name = 파일명, description 있음, tools 있음
+  A2 에이전트 tools 의 mcp__lab__* 는 roles.yaml 에서 그 직무에 허용된 도구여야 한다(아니면 서버가 거절)
+  A3 에이전트 본문이 언급한 스킬(`이름`)이 실제로 있다
+  A4 Skill 도구가 tools 에 있다(없으면 스킬을 못 부른다)
+  S1 스킬 frontmatter: name = 폴더명, description 1~1024자, metadata 값은 문자열
+  S2 metadata.extends 의 스킬이 있다
+  S3 스킬 본문이 언급한 랩 도구를 metadata.role 직무가 쓸 수 있다
+  R1 roles.yaml 의 직무마다 에이전트 파일이 있다
+"""
+import pathlib, re, sys
+import yaml
+
+ORG = pathlib.Path(__file__).resolve().parents[1]
+roles = yaml.safe_load((ORG / "lab/roles.yaml").read_text())
+LAB_TOOLS = set()
+src = (ORG / "lab/lab_server.py").read_text()
+LAB_TOOLS = set(re.findall(r'^\s{4}"([a-z_]+)": \(', src, re.M))
+problems, notes = [], []
+
+
+def front(path):
+    t = path.read_text(encoding="utf-8")
+    if not t.startswith("---\n"):
+        return None, t
+    _, fm, body = t.split("---", 2)
+    return yaml.safe_load(fm), body
+
+
+def allowed(role):
+    r = roles["roles"].get(role)
+    return set(roles.get("common", [])) | set(r.get("tools", [])) if r else set()
+
+
+skills = {}
+for d in sorted((ORG / ".claude/skills").iterdir()):
+    f = d / "SKILL.md"
+    if not f.exists():
+        problems.append(f"S1 {d.name}: SKILL.md 없음"); continue
+    fm, body = front(f)
+    skills[d.name] = (fm or {}, body)
+    if not fm:
+        problems.append(f"S1 {d.name}: frontmatter 없음"); continue
+    if fm.get("name") != d.name:
+        problems.append(f"S1 {d.name}: name='{fm.get('name')}' 폴더명과 다름")
+    desc = fm.get("description") or ""
+    if not (1 <= len(desc) <= 1024):
+        problems.append(f"S1 {d.name}: description 길이 {len(desc)}")
+    for k, v in (fm.get("metadata") or {}).items():
+        if not isinstance(v, str):
+            problems.append(f"S1 {d.name}: metadata.{k} 가 문자열이 아님")
+    lines = len(body.splitlines())
+    if lines > 500:
+        problems.append(f"S1 {d.name}: 본문 {lines}줄 (500줄 이하 권장)")
+
+for name, (fm, body) in skills.items():
+    md = fm.get("metadata") or {}
+    for e in [x.strip() for x in md.get("extends", "").split(",") if x.strip()]:
+        if e not in skills:
+            problems.append(f"S2 {name}: extends '{e}' 없음")
+    role = md.get("role")
+    if role and role in roles["roles"]:
+        used = set(re.findall(r"`([a-z_]+)`", body)) & LAB_TOOLS
+        miss = used - allowed(role)
+        if miss:
+            problems.append(f"S3 {name}: 직무 {role} 가 못 쓰는 도구 언급 {sorted(miss)}")
+
+agents = {}
+for f in sorted((ORG / ".claude/agents").glob("*.md")):
+    fm, body = front(f)
+    agents[f.stem] = fm
+    if not fm or fm.get("name") != f.stem:
+        problems.append(f"A1 {f.stem}: name 불일치"); continue
+    if not fm.get("description"):
+        problems.append(f"A1 {f.stem}: description 없음")
+    tools = fm.get("tools") or ""
+    tools = [t.strip() for t in (tools.split(",") if isinstance(tools, str) else tools)]
+    if "Skill" not in tools:
+        problems.append(f"A4 {f.stem}: tools 에 Skill 없음")
+    lab = {t.replace("mcp__lab__", "") for t in tools if t.startswith("mcp__lab__")}
+    bad = lab - allowed(f.stem)
+    if bad:
+        problems.append(f"A2 {f.stem}: roles.yaml 이 허용하지 않는 랩 도구 {sorted(bad)}")
+    unknown = lab - LAB_TOOLS
+    if unknown:
+        problems.append(f"A2 {f.stem}: 랩 서버에 없는 도구 {sorted(unknown)}")
+    missing_cap = allowed(f.stem) - lab
+    if missing_cap:
+        notes.append(f"   {f.stem}: 서버는 허용하지만 에이전트에 안 준 도구 {sorted(missing_cap)}")
+    for s in set(re.findall(r"`((?:ncs|x)-[a-z0-9-]+|[a-z]+-[a-z-]+)`", body)):
+        if (s.startswith(("ncs-", "x-")) or s in ("ir-coordination", "approval-review", "intake-assign",
+                                                   "evidence-audit", "research-to-skill")) and s not in skills:
+            problems.append(f"A3 {f.stem}: 없는 스킬 '{s}' 언급")
+
+for r in roles["roles"]:
+    if r not in agents:
+        problems.append(f"R1 roles.yaml 의 '{r}' 에이전트 파일 없음")
+
+for p in problems:
+    print("✗", p)
+if "--quiet" not in sys.argv:
+    print("\n참고:\n" + "\n".join(notes) if notes else "")
+    print(f"에이전트 {len(agents)}, 스킬 {len(skills)} (NCS {sum(1 for s in skills if s.startswith('ncs-'))}, "
+          f"확장 {sum(1 for s in skills if s.startswith('x-'))}), 문제 {len(problems)}")
+sys.exit(1 if problems else 0)

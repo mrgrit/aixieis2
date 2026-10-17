@@ -1,0 +1,148 @@
+id: DG-05
+title: 대상 3대 × 항목 다수 — 빠짐없이 진단
+role: diag-consultant
+type: extension
+chapter: 11
+prompt: neobank, adminconsole, db-main 세 서버를 계정 관리·서비스 관리·파일 시스템 세 분야로 진단해 양호·취약 결과표를 만들어 주세요.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  host_config:
+    neobank:
+      sshd_config:
+        PermitRootLogin: 'no'
+      login.defs:
+        PASS_MIN_LEN: 8
+        PASS_MAX_DAYS: 90
+      services:
+      - sshd
+      - gunicorn
+      file_perms:
+        /etc/shadow: '640'
+    adminconsole:
+      sshd_config:
+        PermitRootLogin: 'yes'
+      login.defs:
+        PASS_MIN_LEN: 5
+        PASS_MAX_DAYS: 99999
+      services:
+      - sshd
+      - finger
+      - nfs-server
+      file_perms:
+        /etc/shadow: '644'
+    db-main:
+      sshd_config:
+        PermitRootLogin: 'yes'
+      login.defs:
+        PASS_MIN_LEN: 8
+        PASS_MAX_DAYS: 180
+      services:
+      - sshd
+      - mysqld
+      - telnet
+      file_perms:
+        /etc/shadow: '640'
+  host_accounts:
+    neobank:
+    - user: root
+      uid: 0
+    - user: lp
+      uid: 7
+      shell: /usr/sbin/nologin
+    adminconsole:
+    - user: root
+      uid: 0
+    - user: lp
+      uid: 7
+      shell: /usr/sbin/nologin
+    db-main:
+    - user: root
+      uid: 0
+    - user: lp
+      uid: 7
+      shell: /usr/sbin/nologin
+expect:
+  tools_required:
+  - host_config
+  - host_accounts
+  answer_must:
+  - neobank
+  - adminconsole
+  - db-main
+  - 취약
+  - 결론
+  - 근거
+  - 한계
+  answer_any:
+  - - finger
+  - - telnet
+  - - '644'
+variants:
+- id: N0
+  description: 확장 스킬 x-diag-task-tree 제거(NCS 스킬만으로 일한다).
+  ops:
+  - file: .claude/skills/x-diag-task-tree
+    delete: true
+  expect: {}
+  expect_diff: 확장 스킬이 있으면 evidence/diag-tree.md 를 만들고 미완료 항목을 한계에 옮긴다. N0에서 누락 항목 수를 비교한다.

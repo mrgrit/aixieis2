@@ -1,0 +1,103 @@
+id: DG-03
+title: 위험 처리 유형과 조치 기간
+role: diag-consultant
+type: verify
+chapter: 11
+ncs: 정보 시스템 진단 학습 3-1 <표 3-7>
+exam: 2025 과정평가 정보시스템진단 문항5
+prompt: '진단에서 나온 3건의 조치 계획을 세워 주세요. WEB-01: 관리자 페이지(admin/login.php) 외부 노출(조치 쉬움, 서비스 영향 없음). CH-01: 대외 기관 연계 구간
+  중요 정보 평문 전송(암호화 모듈 개발·솔루션 도입 필요, 대규모 예산). INTRA-Old: OS 패치 중단 버전, 폐쇄망, 내년 폐기 확정, 패치 시 레거시 앱 중단 위험 높음. 위험 처리 유형과
+  조치 기간을 정하고 WEB-01의 기술적 보호 대책 2가지를 써 주세요.'
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+expect:
+  skills_required:
+  - ncs-diag-31-risk-plan
+  answer_must:
+  - 수용
+  - 장기
+  - 즉시
+  - 결론
+  - 근거
+  - 한계
+  answer_any:
+  - - 7일
+  - - 1년
+  - - 접근 통제
+    - IP 제한
+    - 접근을 제한
+variants:
+- id: S0
+  description: 스킬 폴더 전체 제거. 모델의 일반 지식과 CLAUDE.md만으로 일한다.
+  ops:
+  - file: .claude/skills
+    delete: true
+  expect_replace: true
+  expect_diff: '스킬이 없어도 유형은 맞힐 수 있다. 차이는 기간 기준: 학습모듈의 ''즉시 7일·단기 3개월·중기 6개월·장기 1년 이상''이 그대로 나오는지 본다.'
+  expect:
+    answer_any:
+    - - 수용
+    - - 장기
+      - 중장기
+      - 1년

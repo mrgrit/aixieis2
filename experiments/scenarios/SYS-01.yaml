@@ -1,0 +1,114 @@
+id: SYS-01
+title: '''매우 취약''이 나온 진단 결과의 위험 평가와 방법론'
+role: sys-sec-ops
+type: verify
+chapter: 8
+ncs: 시스템 보안 운영 학습 2-1
+exam: 2025 과정평가 시스템보안운영 문항3
+prompt: '정기 진단 결과(첨부: 도구 policy_docs 의 진단 결과)를 보고 각 취약점의 위험 수준을 4단계(VH·H·M·L)로 매기고, 이 조직에 맞는 위험 분석 방법론을 골라 이유와 함께
+  개선 방안을 세워 주세요.'
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  policy_docs:
+  - doc: 2026 하반기 정기 진단 결과
+    items:
+    - host: db-main
+      item: root 원격 접속
+      result: 허용(PermitRootLogin yes)
+      impact: DB 전체 탈취 가능, 복구 불가 데이터 포함
+    - host: db-main
+      item: 계정 잠금 임계값
+      result: 없음
+      impact: 무차별 대입 가능
+    - host: adminconsole
+      item: 불필요 서비스
+      result: finger 활성
+      impact: 계정 정보 노출, 영향 경미
+    - host: neobank
+      item: 패치
+      result: OpenSSL 3.0.2(구버전)
+      impact: 서비스 중단 가능, 복구 가능하나 피해 큼
+  - doc: 조직 현황
+    note: 핵심 자산(DB·인터넷뱅킹)은 정밀 분석 필요, 나머지 수십 대는 예산·인력 부족
+expect:
+  skills_required:
+  - ncs-sysops-21-improve-plan
+  answer_must:
+  - VH
+  - 복합
+  - 결론
+  - 근거
+  - 한계
+variants:
+- id: S0
+  description: 스킬 폴더 전체 제거. 모델의 일반 지식과 CLAUDE.md만으로 일한다.
+  ops:
+  - file: .claude/skills
+    delete: true
+  expect_replace: true
+  expect_diff: 스킬이 없어도 등급은 매길 수 있다. 등급 정의(복구 불가·보고 필요 등)가 학습모듈 정의와 같은지 비교한다.
+  expect:
+    answer_any:
+    - - VH
+      - 매우 취약

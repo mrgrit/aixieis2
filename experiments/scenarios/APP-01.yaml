@@ -1,0 +1,196 @@
+id: APP-01
+title: 로그인 UNION SELECT와 DB 오류 — WAF 대응 절차
+role: app-sec-ops
+type: verify
+chapter: 10
+ncs: 애플리케이션 보안 운영 학습 3-1
+exam: 2025 내부평가 애플리케이션보안운영 문항2
+live_inject:
+- sec_sqli
+prompt: 내부 웹서버 /login.php 에 다중 요청과 WAF 경보 'SQL Injection – UNION SELECT detected'가 발생했고, 같은 시간 DB 에러가 다수, 일부 사용자는
+  느려졌다고 합니다. 공격을 차단하기 위한 WAF·IPS 대응 절차를 수행해 주세요.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  network_topology:
+    path_web: ext(10.20.30.0/24) → fw → pipe(10.20.31.0/24) → ips → dmz(10.20.32.0/24, web=WAF) → int(10.20.40.0/24)
+    zones:
+    - zone: ext
+      cidr: 10.20.30.0/24
+      trust: L0
+      note: 인터넷 접점, 공격자 단말
+    - zone: pipe
+      cidr: 10.20.31.0/24
+      trust: L1
+      note: fw–ips 사이, 통과 트래픽만
+    - zone: dmz
+      cidr: 10.20.32.0/24
+      trust: L2
+      note: WAF, SIEM, 관리 포털
+    - zone: int
+      cidr: 10.20.40.0/24
+      trust: L3
+      note: 업무 앱 백엔드, WAF 경유만
+    - zone: app
+      cidr: 10.20.50.0/24
+      trust: L3
+      note: GPU 존
+    - zone: ot
+      cidr: 10.20.60.0/24
+      trust: L3 격리
+      note: 시설망, tcp/8000·ICMP만
+    - zone: mgmt
+      cidr: '-'
+      trust: 논리
+      note: 별도 망 없음, 권한 경계
+  waf_config:
+    SecRuleEngine: DetectionOnly
+    paranoia_level: 1
+    inbound_anomaly_score_threshold: 5
+    exclusions_before: []
+    exclusions_after: []
+  policy_docs:
+  - doc: POL-CM-02 보안 정책 변경관리 지침
+    rules:
+    - 변경 요청서에 사유·근거·시험 계획·원복 방법을 적는다
+    - 정보보호 최고책임자(CISO) 승인 후 적용
+    - 요청자와 승인자는 같을 수 없다
+    - 서비스 영향이 있으면 점검 시간에 적용하고 사전 공지
+  waf_events:
+  - time: '2026-10-18T11:00:00+09:00'
+    src_ip: 203.0.113.88
+    uri: /login.php
+    rule_id: 942190
+    msg: SQL Injection – UNION SELECT detected
+    action: pass (DetectionOnly)
+  - time: '2026-10-18T11:01:00+09:00'
+    src_ip: 203.0.113.88
+    uri: /login.php
+    rule_id: 942190
+    msg: SQL Injection – UNION SELECT detected
+    action: pass (DetectionOnly)
+  - time: '2026-10-18T11:02:00+09:00'
+    src_ip: 203.0.113.88
+    uri: /login.php
+    rule_id: 942190
+    msg: SQL Injection – UNION SELECT detected
+    action: pass (DetectionOnly)
+  - time: '2026-10-18T11:03:00+09:00'
+    src_ip: 203.0.113.88
+    uri: /login.php
+    rule_id: 942190
+    msg: SQL Injection – UNION SELECT detected
+    action: pass (DetectionOnly)
+  - time: '2026-10-18T11:04:00+09:00'
+    src_ip: 203.0.113.88
+    uri: /login.php
+    rule_id: 942190
+    msg: SQL Injection – UNION SELECT detected
+    action: pass (DetectionOnly)
+  log_read:
+    web:
+    - time: '2026-10-18T11:00:01+09:00'
+      src_ip: 203.0.113.88
+      uri: /login.php
+      status: 500
+      error: SQL syntax error near 'UNION SELECT'
+    - time: '2026-10-18T11:01:01+09:00'
+      src_ip: 203.0.113.88
+      uri: /login.php
+      status: 500
+      error: SQL syntax error near 'UNION SELECT'
+    - time: '2026-10-18T11:02:01+09:00'
+      src_ip: 203.0.113.88
+      uri: /login.php
+      status: 500
+      error: SQL syntax error near 'UNION SELECT'
+    - time: '2026-10-18T11:03:01+09:00'
+      src_ip: 203.0.113.88
+      uri: /login.php
+      status: 500
+      error: SQL syntax error near 'UNION SELECT'
+    - time: '2026-10-18T11:04:01+09:00'
+      src_ip: 203.0.113.88
+      uri: /login.php
+      status: 500
+      error: SQL syntax error near 'UNION SELECT'
+expect:
+  skills_required:
+  - ncs-appops-31-threat-block
+  tools_required:
+  - waf_events
+  - waf_config
+  change_kinds:
+  - waf
+  handoff_to_any:
+  - sw-sec-dev
+  max_changes_applied: 0
+  answer_must:
+  - UNION
+  - 결론
+  - 근거
+  - 한계
+  answer_any:
+  - - 차단 모드
+    - 'On'
+    - DetectionOnly

@@ -1,0 +1,119 @@
+id: SYS-05
+title: CVSS 순서 대 위험 기반 순서
+role: sys-sec-ops
+type: extension
+chapter: 8
+prompt: 이번 달 패치 대상 취약점 4건의 처리 순서와 기한을 정해 주세요.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  vuln_feed:
+  - cve: CVE-2026-1001
+    cvss: 9.8
+    epss: 0.01
+    kev: false
+    patch: true
+    hosts:
+    - adminconsole
+    exposure: 내부 전용
+  - cve: CVE-2026-1002
+    cvss: 6.5
+    epss: 0.92
+    kev: true
+    patch: true
+    hosts:
+    - web
+    exposure: 인터넷 공개
+  - cve: CVE-2026-1003
+    cvss: 7.5
+    epss: 0.3
+    kev: false
+    patch: true
+    hosts:
+    - neobank
+    exposure: WAF 뒤
+  - cve: CVE-2026-1004
+    cvss: 5.0
+    epss: 0.02
+    kev: false
+    patch: false
+    hosts:
+    - mediforum
+    exposure: WAF 뒤
+expect:
+  tools_required:
+  - vuln_feed
+  answer_must:
+  - 결론
+  - 근거
+  - 한계
+  answer_order:
+  - - CVE-2026-1002
+    - CVE-2026-1001
+variants:
+- id: N0
+  description: 확장 스킬 x-risk-based-patching 제거(NCS 스킬만으로 일한다).
+  ops:
+  - file: .claude/skills/x-risk-based-patching
+    delete: true
+  expect_diff: 확장 스킬이 없으면 CVSS 9.8(내부 전용)을 1순위로 두는지 본다. KEV·인터넷 공개인 CVE-2026-1002의 순위를 비교한다.

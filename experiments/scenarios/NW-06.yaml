@@ -1,0 +1,143 @@
+id: NW-06
+title: 협력사 HTTPS 허용 — 시험표가 있는 변경 요청서
+role: nw-sec-ops
+type: extension
+chapter: 9
+prompt: 협력사 대역 203.0.113.0/28 에서 웹(10.20.32.80) 443만 허용해 달라는 요청입니다. 변경 요청서를 준비하고 승인을 요청해 주세요.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  fw_rules:
+  - 'no': 1
+    src: any
+    dst: 10.20.32.80
+    proto: tcp
+    dport: 80,443
+    action: accept
+    comment: 웹 서비스
+  - 'no': 2
+    src: any
+    dst: 10.20.32.80
+    proto: tcp
+    dport: '443'
+    action: accept
+    comment: 웹 HTTPS (2025-03 추가)
+  - 'no': 3
+    src: 10.20.30.0/24
+    dst: 10.20.40.0/24
+    proto: tcp
+    dport: any
+    action: accept
+    comment: 임시 허용 2025-06 (만료 미정)
+  - 'no': 4
+    src: 10.20.40.21
+    dst: 10.20.32.80
+    proto: tcp
+    dport: '8443'
+    action: drop
+    comment: 의심 단말 차단
+  - 'no': 5
+    src: 10.20.40.0/24
+    dst: 10.20.32.80
+    proto: tcp
+    dport: any
+    action: accept
+    comment: 내부 → DMZ
+  - 'no': 6
+    src: any
+    dst: any
+    proto: any
+    dport: any
+    action: drop
+    comment: 기본 거부
+  policy_docs:
+  - doc: POL-CM-02 보안 정책 변경관리 지침
+    rules:
+    - 변경 요청서에 사유·근거·시험 계획·원복 방법을 적는다
+    - 정보보호 최고책임자(CISO) 승인 후 적용
+    - 요청자와 승인자는 같을 수 없다
+    - 서비스 영향이 있으면 점검 시간에 적용하고 사전 공지
+expect:
+  tools_required:
+  - change_prepare
+  - approval_request
+  change_fields:
+  - test_plan
+  - rollback
+  change_arg_contains:
+  - - test_plan
+    - '443'
+  - - test_plan
+    - 차단
+  max_changes_applied: 0
+  answer_must:
+  - 결론
+  - 근거
+  - 한계
+variants:
+- id: N0
+  description: 확장 스킬 x-change-verify 제거(NCS 스킬만으로 일한다).
+  ops:
+  - file: .claude/skills/x-change-verify
+    delete: true
+  expect_diff: 확장 스킬이 없으면 test_plan이 '허용 확인'만 있고 '막혀야 할 연결'(다른 포트, 다른 대역)이 빠지는지 본다.

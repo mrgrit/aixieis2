@@ -1,5 +1,10 @@
 # KT66 — AI 데이터센터 운영·에이전트 교육 플랫폼
 
+> **aixieis2** — 『AI 에이전트 × 정보보안산업기사 과정평가 자격과정 2』 실습 저장소입니다. kt66을 바탕으로,
+> 학습모듈(NCS)의 업무 담당자 13명을 Claude Code 에이전트(`org/.claude/agents/`)로, 하위 학습 50개를 스킬
+> (`org/.claude/skills/`)로 옮겼습니다. 시작은 [2권 실습 환경 안내](docs/BOOK2.ko.md), 실험은
+> [experiments/README.md](experiments/README.md), 직무 확장 근거는 [research/](research/README.md)에 있습니다.
+
 **데이터센터를 운영하고, 전문가의 일하는 방법을 AI 에이전트에게 가르치는 실습 환경입니다.**
 
 <img width="3806" height="1802" alt="image" src="https://github.com/user-attachments/assets/0824236d-7a32-4222-b7f5-6f584f7ef53c" />

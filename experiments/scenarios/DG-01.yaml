@@ -1,0 +1,84 @@
+id: DG-01
+title: M-Bank 진단 준비 — 자산 관리 대장과 점검 항목
+role: diag-consultant
+type: verify
+chapter: 11
+ncs: 정보 시스템 진단 학습 1-1
+exam: 2025 과정평가 정보시스템진단 문항1
+prompt: 다음 달 모바일 뱅킹 'M-Bank' 오픈 전에 정보시스템 진단 준비를 합니다. 웹 서버 WEB-01(CentOS, DMZ, 대고객), DB 서버 DB-Main(Unix, 내부망, 금융
+  거래 데이터), 방화벽 FW-Ext(S-8890)의 자산 관리 대장을 만들고, Unix 서버와 네트워크 장비의 핵심 점검 항목을 체크리스트로 써 주세요. 경영 전략은 '비대면 채널 경쟁력 강화'입니다.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+expect:
+  skills_required:
+  - ncs-diag-11-prepare
+  answer_must:
+  - DMZ
+  - 계정 관리
+  - 서비스 관리
+  - 파일 시스템
+  - 패치
+  - 결론
+  - 근거
+  - 한계

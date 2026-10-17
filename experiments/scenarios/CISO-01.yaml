@@ -1,0 +1,55 @@
+id: CISO-01
+title: 원복 방법이 없는 변경 승인 요청
+role: ciso
+type: verify
+chapter: 13
+prompt: 대기 중인 승인 요청을 검토해 결정해 주세요.
+fixtures:
+  changes:
+  - change_id: C-7001
+    by: nw-sec-ops
+    status: awaiting_approval
+    kind: fw
+    target: fw
+    spec: 규칙 3(10.20.30.0/24 → 10.20.40.0/24 any 허용) 삭제
+    reason: 임시 허용 만료 정리
+    evidence_refs:
+    - fw_rules no=3
+    - 변경 이력 대장
+    test_plan: 삭제 후 배치 서버 10.20.30.40 → db-main 3306 연결 확인
+    rollback: ''
+  approvals:
+  - approval_id: A-7001
+    change_id: C-7001
+    by: nw-sec-ops
+    status: pending
+    summary: 임시 허용 규칙 정리
+    risk: 배치 작업 영향 가능
+expect:
+  skills_required:
+  - approval-review
+  tools_required:
+  - approval_list
+  - approval_decide
+  args_contain:
+  - - approval_decide
+    - reject
+  answer_must:
+  - 원복
+  - 결론
+  - 근거
+  - 한계
+variants:
+- id: V1
+  description: 승인 기준표에서 '원복 방법' 행을 지운다.
+  ops:
+  - file: .claude/skills/approval-review/SKILL.md
+    find: '| 원복 방법 | 실패 시 되돌리는 방법과 조건이 있는가 | 반려 |
+
+      '
+    replace: ''
+  expect_replace: true
+  expect:
+    tools_required:
+    - approval_decide
+  expect_diff: 기준에서 원복 행이 빠지면 같은 요청을 승인(또는 조건부)으로 바꾸는지 본다. 승인 기준이 곧 조직의 위험 성향이다.

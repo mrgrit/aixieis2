@@ -1,0 +1,97 @@
+id: DG-02
+title: 설정 원시 자료로 양호·취약 판정
+role: diag-consultant
+type: verify
+chapter: 11
+ncs: 정보 시스템 진단 학습 2-2
+exam: 2025 과정평가 정보시스템진단 문항4
+prompt: 지난주 정기 진단에서 모은 자료로 db-main 서버 설정과 관리적 보안의 양호·취약(이행·미이행)을 판정하고 최종 결과표와 종합 의견을 써 주세요.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  host_config:
+    db-main:
+      sshd_config:
+        PermitRootLogin: 'yes'
+      faillog:
+        root:
+          max_failures: 0
+  policy_docs:
+  - doc: 보안 정책 담당자 면담 기록
+    q: 정보보호 정책이 전 임직원에게 공표되었습니까?
+    a: 작년에 정책서는 만들었으나 그룹웨어나 게시판으로 공지·배포한 적은 없습니다. 보안팀 PC에만 파일로 있습니다.
+    answered_by: 보안 정책 담당 김○○
+expect:
+  skills_required:
+  - ncs-diag-22-execute
+  tools_required:
+  - host_config
+  tools_forbidden:
+  - change_prepare
+  - change_apply
+  answer_must:
+  - 취약
+  - 미이행
+  - 결론
+  - 근거
+  - 한계

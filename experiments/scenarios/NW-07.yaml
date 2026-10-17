@@ -1,0 +1,182 @@
+id: NW-07
+title: 스위치 관리 포트 비인가 접근과 내부 PC 점거
+role: nw-sec-ops
+type: verify
+chapter: 9
+ncs: 네트워크 보안 운영 학습 3-1·3-2
+exam: 2025 내부평가 네트워크보안운영 문항3
+live_inject:
+- sec_lateral
+prompt: '관제 분석 결과: 외부 공격자가 내부 PC 10.20.40.33 을 점거했고, 그 PC에서 스위치 관리 포트(SSH 22, Telnet 23)로 접근해 설정 파일을 내려받으려 했습니다.
+  일부 스위치에서 ACL이 비활성화되고 로그 전송 오류가 있습니다. 방화벽·IPS로 차단하는 방안과 추가 보호 정책, 차단 후 정상화 확인 항목을 정리하고 차단 변경을 준비해 주세요.'
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  - asset: core-sw
+    ip: 10.20.40.2
+    desc: L3 스위치
+    mgmt: SSH/Telnet
+  network_topology:
+    path_web: ext(10.20.30.0/24) → fw → pipe(10.20.31.0/24) → ips → dmz(10.20.32.0/24, web=WAF) → int(10.20.40.0/24)
+    zones:
+    - zone: ext
+      cidr: 10.20.30.0/24
+      trust: L0
+      note: 인터넷 접점, 공격자 단말
+    - zone: pipe
+      cidr: 10.20.31.0/24
+      trust: L1
+      note: fw–ips 사이, 통과 트래픽만
+    - zone: dmz
+      cidr: 10.20.32.0/24
+      trust: L2
+      note: WAF, SIEM, 관리 포털
+    - zone: int
+      cidr: 10.20.40.0/24
+      trust: L3
+      note: 업무 앱 백엔드, WAF 경유만
+    - zone: app
+      cidr: 10.20.50.0/24
+      trust: L3
+      note: GPU 존
+    - zone: ot
+      cidr: 10.20.60.0/24
+      trust: L3 격리
+      note: 시설망, tcp/8000·ICMP만
+    - zone: mgmt
+      cidr: '-'
+      trust: 논리
+      note: 별도 망 없음, 권한 경계
+  fw_rules:
+  - 'no': 1
+    src: any
+    dst: 10.20.32.80
+    proto: tcp
+    dport: 80,443
+    action: accept
+    comment: 웹 서비스
+  - 'no': 2
+    src: any
+    dst: 10.20.32.80
+    proto: tcp
+    dport: '443'
+    action: accept
+    comment: 웹 HTTPS (2025-03 추가)
+  - 'no': 3
+    src: 10.20.30.0/24
+    dst: 10.20.40.0/24
+    proto: tcp
+    dport: any
+    action: accept
+    comment: 임시 허용 2025-06 (만료 미정)
+  - 'no': 4
+    src: 10.20.40.21
+    dst: 10.20.32.80
+    proto: tcp
+    dport: '8443'
+    action: drop
+    comment: 의심 단말 차단
+  - 'no': 5
+    src: 10.20.40.0/24
+    dst: 10.20.32.80
+    proto: tcp
+    dport: any
+    action: accept
+    comment: 내부 → DMZ
+  - 'no': 6
+    src: any
+    dst: any
+    proto: any
+    dport: any
+    action: drop
+    comment: 기본 거부
+  log_read:
+    ips:
+    - time: '2026-10-18T13:10:00+09:00'
+      sig: Telnet login attempt to network device
+      src: 10.20.40.33
+      dst: 10.20.40.2
+      dport: 23
+    - time: '2026-10-18T13:12:00+09:00'
+      sig: TFTP config file download attempt
+      src: 10.20.40.33
+      dst: 10.20.40.2
+      dport: 69
+expect:
+  skills_any:
+  - ncs-nwops-31-threat-block
+  - ncs-nwops-32-recovery-docs
+  change_kinds:
+  - fw
+  change_fields:
+  - evidence_refs
+  - rollback
+  answer_must:
+  - 결론
+  - 근거
+  - 한계
+  answer_any:
+  - - 관리망
+    - 관리자 전용
+  - - ACL
+  - - 로그 전송

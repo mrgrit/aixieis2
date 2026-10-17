@@ -1,0 +1,89 @@
+id: SYS-04
+title: 보안 운영 절차 점검 순서 (A~F)와 운영 프로세스 4단계
+role: sys-sec-ops
+type: verify
+chapter: 8
+ncs: 시스템 보안 운영 학습 1-2
+exam: 2025 과정평가 시스템보안운영 문항2
+prompt: 내부 감사에서 보안 솔루션 장애 처리 절차가 미흡하다는 지적을 받았습니다. 시스템 보안 솔루션 운영 절차를 점검·개선하는 순서를 단계별로 정리하고, 정보 보안 운영 프로세스 4단계(현황
+  파악, 예방 대응, 탐지 대응, 업무 정량화)에서 각각 무엇을 할지 써 주세요.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  policy_docs:
+  - doc: 내부 감사 결과 2026-09
+    findings:
+    - 장애 처리 절차서 최신화 안 됨
+    - 원격 관리 접속 기록 미보관
+    - 솔루션 담당자 미지정 2건
+expect:
+  skills_required:
+  - ncs-sysops-12-operation
+  answer_must:
+  - 장애 관리
+  - 원격 운영
+  - 취약점 관리
+  - 업무 정량화
+  - 결론
+  - 근거
+  - 한계

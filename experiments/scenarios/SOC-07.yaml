@@ -1,0 +1,188 @@
+id: SOC-07
+title: 혼합 경보 트리아지 — 첫 검색이 0건일 때
+role: soc-analyst
+type: extension
+chapter: 12
+prompt: 새벽 2~4시 사이 SIEM 경보 4건(AL-1~AL-4)을 트리아지해 주세요. 각각 대응 필요/불필요로 나누고 사유와 넘길 담당을 표로 주세요. 참고로 'brute force'로 검색하면
+  아무것도 안 나옵니다.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  network_topology:
+    path_web: ext(10.20.30.0/24) → fw → pipe(10.20.31.0/24) → ips → dmz(10.20.32.0/24, web=WAF) → int(10.20.40.0/24)
+    zones:
+    - zone: ext
+      cidr: 10.20.30.0/24
+      trust: L0
+      note: 인터넷 접점, 공격자 단말
+    - zone: pipe
+      cidr: 10.20.31.0/24
+      trust: L1
+      note: fw–ips 사이, 통과 트래픽만
+    - zone: dmz
+      cidr: 10.20.32.0/24
+      trust: L2
+      note: WAF, SIEM, 관리 포털
+    - zone: int
+      cidr: 10.20.40.0/24
+      trust: L3
+      note: 업무 앱 백엔드, WAF 경유만
+    - zone: app
+      cidr: 10.20.50.0/24
+      trust: L3
+      note: GPU 존
+    - zone: ot
+      cidr: 10.20.60.0/24
+      trust: L3 격리
+      note: 시설망, tcp/8000·ICMP만
+    - zone: mgmt
+      cidr: '-'
+      trust: 논리
+      note: 별도 망 없음, 권한 경계
+  siem_search:
+  - time: '2026-10-18T02:10:00+09:00'
+    id: AL-1
+    rule: Web vulnerability scan
+    src_ip: 10.20.32.50
+    dst: web
+  - time: '2026-10-18T03:05:00+09:00'
+    id: AL-2
+    rule: Multiple authentication failures followed by success
+    src_ip: 10.20.30.71
+    dst: adminconsole
+  - time: '2026-10-18T03:20:00+09:00'
+    id: AL-3
+    rule: Large outbound transfer
+    src_ip: 10.20.40.50
+    dst: 198.51.100.9
+    bytes: 2147483648
+  - time: '2026-10-18T03:30:00+09:00'
+    id: AL-4
+    rule: ICMP sweep
+    src_ip: 10.20.40.21
+    dst: 10.20.40.0/24
+  log_read:
+    auth:
+    - time: '2026-10-18T03:00:00+09:00'
+      host: adminconsole
+      user: opsadmin
+      src_ip: 10.20.30.71
+      result: fail
+    - time: '2026-10-18T03:01:00+09:00'
+      host: adminconsole
+      user: opsadmin
+      src_ip: 10.20.30.71
+      result: fail
+    - time: '2026-10-18T03:02:00+09:00'
+      host: adminconsole
+      user: opsadmin
+      src_ip: 10.20.30.71
+      result: fail
+    - time: '2026-10-18T03:03:00+09:00'
+      host: adminconsole
+      user: opsadmin
+      src_ip: 10.20.30.71
+      result: fail
+    - time: '2026-10-18T03:04:00+09:00'
+      host: adminconsole
+      user: opsadmin
+      src_ip: 10.20.30.71
+      result: fail
+    - time: '2026-10-18T03:05:10+09:00'
+      host: adminconsole
+      user: opsadmin
+      src_ip: 10.20.30.71
+      result: success
+    - time: '2026-10-18T03:06:00+09:00'
+      host: adminconsole
+      user: opsadmin
+      action: useradd svc_sync -G sudo
+    fw:
+    - time: '2026-10-18T03:20:00+09:00'
+      src: 10.20.40.50
+      dst: 198.51.100.9
+      dport: 443
+      bytes: 2147483648
+      action: accept
+expect:
+  answer_must:
+  - AL-1
+  - AL-2
+  - AL-3
+  - AL-4
+  - 결론
+  - 근거
+  - 한계
+  tools_required:
+  - log_read
+  answer_any:
+  - - 허가
+    - 점검 서버
+    - scanner-01
+variants:
+- id: N0
+  description: 확장 스킬 x-alert-triage-workflow 제거(NCS 스킬만으로 일한다).
+  ops:
+  - file: .claude/skills/x-alert-triage-workflow
+    delete: true
+  expect_diff: 확장 스킬이 없으면 '검색 0건' 문장에 끌려 AL-2(무차별 대입 후 계정 생성)를 낮게 볼 수 있다. AL-2·AL-3 분류와 근거 ID 표기를 비교한다.

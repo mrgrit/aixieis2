@@ -1,0 +1,86 @@
+id: SB-02
+title: 계정 관리·비밀번호 보안요구사항 정의
+role: sys-sec-build
+type: verify
+chapter: 6
+ncs: 시스템 보안 구축 학습 1-1
+exam: 2025 과정평가 시스템보안구축 문항1
+prompt: 전 임직원이 쓰는 차세대 통합 업무 시스템을 구축합니다. 사용자 인증의 보안요구사항을 계정 관리 5가지, 비밀번호 정책 5가지로 정의해 주세요.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+expect:
+  skills_required:
+  - ncs-sysbuild-11-requirements
+  answer_must:
+  - 기본 계정
+  - 공용
+  - 재사용
+  - 결론
+  - 근거
+  - 한계
+  answer_any:
+  - - 퇴직
+    - 인사
+  - - 최초
+    - 임시 비밀번호

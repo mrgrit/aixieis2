@@ -1,0 +1,6 @@
+evidence/*
+tickets/*
+candidates/*
+!evidence/.gitkeep
+!tickets/.gitkeep
+!candidates/.gitkeep

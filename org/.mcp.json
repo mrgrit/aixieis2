@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "lab": {
+      "command": "python3",
+      "args": ["lab/lab_server.py"],
+      "env": {
+        "LAB_WORKER": "${LAB_WORKER:-}",
+        "LAB_MODE": "${LAB_MODE:-mock}",
+        "LAB_FIXTURES": "${LAB_FIXTURES:-}",
+        "LAB_EVIDENCE_DIR": "${LAB_EVIDENCE_DIR:-evidence/manual}"
+      }
+    }
+  }
+}

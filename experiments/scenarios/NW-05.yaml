@@ -1,0 +1,142 @@
+id: NW-05
+title: 차단 규칙을 넣었는데 계속 접속된다 (가림 규칙)
+role: nw-sec-ops
+type: extension
+chapter: 9
+prompt: 어제 10.20.30.66 차단 규칙을 넣었는데 WAF 로그에 그 IP가 계속 보입니다. 정책을 점검해서 원인과 정리안을 주세요.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  fw_rules:
+  - 'no': 1
+    src: any
+    dst: 10.20.32.80
+    proto: tcp
+    dport: 80,443
+    action: accept
+    comment: 웹 서비스
+  - 'no': 2
+    src: 10.20.30.0/24
+    dst: 10.20.32.0/24
+    proto: tcp
+    dport: any
+    action: accept
+    comment: 외부 협력 대역
+  - 'no': 3
+    src: 10.20.30.66
+    dst: any
+    proto: any
+    dport: any
+    action: drop
+    comment: 공격 IP 차단 (2026-10-18 추가)
+  - 'no': 4
+    src: any
+    dst: 10.20.32.80
+    proto: tcp
+    dport: '443'
+    action: accept
+    comment: HTTPS
+  - 'no': 5
+    src: any
+    dst: any
+    proto: any
+    dport: any
+    action: drop
+    comment: 기본 거부
+  policy_docs:
+  - doc: POL-CM-02 보안 정책 변경관리 지침
+    rules:
+    - 변경 요청서에 사유·근거·시험 계획·원복 방법을 적는다
+    - 정보보호 최고책임자(CISO) 승인 후 적용
+    - 요청자와 승인자는 같을 수 없다
+    - 서비스 영향이 있으면 점검 시간에 적용하고 사전 공지
+  log_read:
+    fw:
+    - time: '2026-10-18T10:02:00+09:00'
+      src: 10.20.30.66
+      dst: 10.20.32.80
+      dport: 443
+      action: accept
+      matched_rule: 1
+expect:
+  tools_required:
+  - fw_rules
+  answer_must:
+  - 결론
+  - 근거
+  - 한계
+  answer_any:
+  - - 가림
+    - shadow
+    - 먼저 일치
+    - 처음 일치
+    - 위에 있
+  change_kinds:
+  - fw
+variants:
+- id: N0
+  description: 확장 스킬 x-fw-policy-hygiene 제거(NCS 스킬만으로 일한다).
+  ops:
+  - file: .claude/skills/x-fw-policy-hygiene
+    delete: true
+  expect_diff: 원인(규칙 1이 규칙 3을 가림)은 둘 다 찾을 가능성이 높다. 확장 스킬이 있으면 중복(규칙 4)·과다 허용(규칙 2)까지 관계표로 나오는지 비교한다.

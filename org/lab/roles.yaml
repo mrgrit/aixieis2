@@ -1,0 +1,108 @@
+# 직무별 도구 상한 — 랩 서버가 강제한다.
+#
+# 에이전트 파일(.claude/agents/*.md)의 tools 목록은 "클로드 코드가 보여 주는 도구"이고,
+# 이 파일은 "랩 서버가 실제로 받아 주는 도구"다. 학생이 에이전트 파일에 도구를 하나 더
+# 적어도 여기서 막히면 role_boundary 로 거절된다. 지침(문서)과 강제(서버)의 차이를
+# 실험으로 확인하는 것이 2권 3장의 목적이다.
+#
+# change_kinds: change_prepare 로 준비할 수 있는 변경 종류
+# refer: 범위 밖 요청을 받았을 때 안내할 담당자
+
+version: 1
+
+common: [ticket_create, handoff_request, handoff_inbox, worker_directory, asset_inventory, policy_docs]
+
+roles:
+  sw-sec-dev:
+    title: SW 개발 보안 담당자
+    tools: [code_read, sast_results, change_prepare, approval_request]
+    change_kinds: [code]
+
+  sys-sec-build:
+    title: 시스템 보안 설계·구축 담당자
+    tools: [host_config, host_accounts, change_prepare, approval_request]
+    change_kinds: [host]
+
+  nw-sec-build:
+    title: 네트워크 보안 설계·구축 담당자
+    tools: [network_topology, fw_rules, change_prepare, approval_request]
+    change_kinds: [fw-design, network-design]
+
+  sys-sec-ops:
+    title: 시스템 보안 운영 담당자
+    tools: [host_config, host_accounts, package_inventory, vuln_feed, backup_status,
+            log_read, change_prepare, change_apply, approval_request, change_list]
+    change_kinds: [host, patch, backup]
+    log_sources: [host, auth]
+
+  nw-sec-ops:
+    title: 네트워크 보안 운영 담당자
+    tools: [fw_rules, ids_rules, network_topology, log_read, change_prepare,
+            change_apply, approval_request, change_list]
+    change_kinds: [fw, ids, containment]
+    log_sources: [fw, ips, vpn]
+
+  app-sec-ops:
+    title: 애플리케이션 보안 운영 담당자
+    tools: [waf_events, waf_config, log_read, vuln_feed, network_topology, change_prepare, change_apply, approval_request, change_list]
+    change_kinds: [waf, app-config]
+    log_sources: [web, waf]
+
+  diag-consultant:
+    title: 정보시스템 진단 담당자
+    tools: [host_config, host_accounts, package_inventory, vuln_feed, fw_rules,
+            waf_config, network_topology, backup_status]
+    change_kinds: []
+
+  soc-analyst:
+    title: 보안관제 분석가
+    tools: [siem_search, log_read, waf_events, ids_rules, network_topology, incident_history, vuln_feed]
+    change_kinds: []
+    log_sources: [fw, ips, waf, web, host, auth, vpn]
+
+  cert-coordinator:
+    title: 침해사고 대응 조정자 (CERT)
+    tools: [siem_search, log_read, incident_history, network_topology, change_prepare, approval_request, change_list]
+    change_kinds: [containment]
+    log_sources: [fw, ips, waf, web, host, auth, vpn]
+
+  ciso:
+    title: 정보보호 최고책임자 (승인자)
+    tools: [approval_list, approval_decide, change_list]
+    change_kinds: []
+
+  service-desk:
+    title: 서비스데스크 (접수·배정)
+    tools: []
+    change_kinds: []
+
+  auditor:
+    title: 감사 담당 (실행 증적 검증)
+    tools: [evidence_read, approval_list, change_list]
+    change_kinds: []
+
+  researcher:
+    title: 업무 방법 연구원 (확장 스킬 후보 작성)
+    tools: []
+    change_kinds: []
+
+# 범위 밖 도구를 요청했을 때 안내할 담당자 (도구 → 담당 직무)
+owners:
+  code_read: sw-sec-dev
+  sast_results: sw-sec-dev
+  host_config: sys-sec-ops
+  host_accounts: sys-sec-ops
+  package_inventory: sys-sec-ops
+  backup_status: sys-sec-ops
+  fw_rules: nw-sec-ops
+  ids_rules: nw-sec-ops
+  network_topology: nw-sec-build
+  waf_events: app-sec-ops
+  waf_config: app-sec-ops
+  siem_search: soc-analyst
+  vuln_feed: sys-sec-ops
+  approval_decide: ciso
+  approval_list: ciso
+  change_apply: nw-sec-ops
+  evidence_read: auditor
+  incident_history: soc-analyst

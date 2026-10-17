@@ -1,0 +1,129 @@
+id: APP-05
+title: 게시판 정상 글이 942100에 막힌다 — 가장 좁은 예외
+role: app-sec-ops
+type: extension
+chapter: 10
+prompt: 게시판(/board/write)에 글을 쓰면 403이 난다는 민원이 많습니다. 원인을 찾아 WAF 정책을 고치는 변경 요청서를 준비해 주세요.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  waf_config:
+    SecRuleEngine: 'On'
+    paranoia_level: 2
+    inbound_anomaly_score_threshold: 5
+    exclusions_before: []
+    exclusions_after: []
+  waf_events:
+  - time: '2026-10-18T10:10:00+09:00'
+    src_ip: 10.20.40.100
+    uri: /board/write
+    rule_id: 942100
+    matched_var: ARGS:comment
+    matched: select the best option and update me
+    action: deny
+  - time: '2026-10-18T10:11:00+09:00'
+    src_ip: 10.20.40.101
+    uri: /board/write
+    rule_id: 942100
+    matched_var: ARGS:comment
+    matched: please select one or delete
+    action: deny
+  - time: '2026-10-18T10:12:00+09:00'
+    src_ip: 10.20.40.102
+    uri: /board/write
+    rule_id: 942100
+    matched_var: ARGS:comment
+    matched: union of the two teams
+    action: deny
+  - time: '2026-10-18T10:20:00+09:00'
+    src_ip: 203.0.113.5
+    uri: /board/write
+    rule_id: 942100
+    matched_var: ARGS:title
+    matched: 1' or '1'='1
+    action: deny
+expect:
+  change_kinds:
+  - waf
+  change_arg_contains:
+  - - spec
+    - comment
+  change_fields:
+  - test_plan
+  - rollback
+  answer_must:
+  - 결론
+  - 근거
+  - 한계
+  answer_any:
+  - - ARGS:comment
+    - comment 변수
+    - comment 파라미터
+variants:
+- id: N0
+  description: 확장 스킬 x-crs-fp-tuning 제거(NCS 스킬만으로 일한다).
+  ops:
+  - file: .claude/skills/x-crs-fp-tuning
+    delete: true
+  expect_diff: 확장 스킬이 없으면 942100 규칙 전체 제거(SecRuleRemoveById)나 경로 전체 예외 같은 넓은 조치를 제안하는지 본다. ARGS:title 의 실제 공격이 계속
+    막히는지가 핵심.

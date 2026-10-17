@@ -1,0 +1,176 @@
+id: SOC-04
+title: 방화벽 허용 5초 뒤 IPS BOF 탐지 — 상관분석과 공격 동향
+role: soc-analyst
+type: verify
+chapter: 12
+ncs: 보안로그 분석 학습 2-2
+exam: 2025 과정평가 보안로그분석 문항5
+prompt: 12월 09일 14:00경 통합관제 현황판에 긴급 경보가 떴습니다. 방화벽·IPS 로그와 기술지원팀 피해 보고, 과거 침해 이력을 상관분석해 정탐 여부, 최종 타깃과 피해, 침해 시나리오(누가·어디로·어떻게·왜),
+  일회성인지 지속 위협인지와 대응 방향을 보고해 주세요.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  - asset: erp
+    ip: 10.20.40.20
+    zone: int
+    importance: 상
+    desc: 인사·재무·영업 통합 ERP
+    status: '기술지원팀 보고(14:05): 기술지원 이력 테이블 일부 손상, 서비스 지연'
+  network_topology:
+    path_web: ext(10.20.30.0/24) → fw → pipe(10.20.31.0/24) → ips → dmz(10.20.32.0/24, web=WAF) → int(10.20.40.0/24)
+    zones:
+    - zone: ext
+      cidr: 10.20.30.0/24
+      trust: L0
+      note: 인터넷 접점, 공격자 단말
+    - zone: pipe
+      cidr: 10.20.31.0/24
+      trust: L1
+      note: fw–ips 사이, 통과 트래픽만
+    - zone: dmz
+      cidr: 10.20.32.0/24
+      trust: L2
+      note: WAF, SIEM, 관리 포털
+    - zone: int
+      cidr: 10.20.40.0/24
+      trust: L3
+      note: 업무 앱 백엔드, WAF 경유만
+    - zone: app
+      cidr: 10.20.50.0/24
+      trust: L3
+      note: GPU 존
+    - zone: ot
+      cidr: 10.20.60.0/24
+      trust: L3 격리
+      note: 시설망, tcp/8000·ICMP만
+    - zone: mgmt
+      cidr: '-'
+      trust: 논리
+      note: 별도 망 없음, 권한 경계
+  policy_docs:
+  - doc: POL-IR-01 침해사고 대응 절차
+    steps:
+    - 인지
+    - 판단(정탐·오탐)
+    - '초기대응: 후속 공격 차단(선 조치 후 보고 허용 범위: 출발지 IP 단일 차단)'
+    - 이해관계자 통보(대상 시스템 운영 담당, 네트워크 책임자, 정보보호팀)
+    - 침해 범위 확인
+    - 침해 이력 기록
+    - 정보시스템 보호(격리는 CISO 승인)
+    note: 격리 대상 시스템은 전원이 켜진 상태로 격리한다(증거 보전)
+  - doc: POL-SOC-03 탐지 판정 기준
+    rule: 2개 이상의 정보시스템·보안시스템에서 동일·유사 이벤트가 탐지되고 자산 손실·비인가 변경이 확인되면 정탐
+  log_read:
+    fw:
+    - time: '2026-12-09T13:58:10+09:00'
+      src: 198.51.100.0/24 (A국가)
+      dst: 10.20.32.80
+      dport: 80
+      action: accept
+      note: 평소 접속이 드문 국가
+    ips:
+    - time: '2026-12-09T13:58:15+09:00'
+      sig: Web Server Buffer Overflow Attack
+      src: 198.51.100.77
+      dst: 10.20.40.20
+      action: alert
+  incident_history:
+  - year: 2020
+    summary: A국가 해커 그룹의 동종 업계 웹 서버 공격, 기법 유사
+  - year: 2022
+    summary: 198.51.100.0/24 대역에서 SQL Injection 시도
+expect:
+  skills_required:
+  - ncs-log-22-correlation
+  tools_required:
+  - log_read
+  - incident_history
+  answer_must:
+  - 정탐
+  - 결론
+  - 근거
+  - 한계
+  answer_any:
+  - - 10.20.40.20
+    - ERP
+  - - 지속
+  - - 5초
+variants:
+- id: V1
+  description: 침해 시나리오 단계에 MITRE ATT&CK 전술 이름을 붙이게 한다.
+  ops:
+  - file: .claude/skills/ncs-log-22-correlation/SKILL.md
+    find: '## 산출물'
+    replace: '## 단계 이름
+
+
+      해석(단계) 열에는 MITRE ATT&CK 전술 이름(Reconnaissance, Initial Access, Execution, Impact 등)을 영어로 함께 적는다.
+
+
+      ## 산출물'
+  expect:
+    answer_any:
+    - - Initial Access
+      - Impact
+      - Execution
+  expect_diff: 타임라인의 단계 이름 체계가 NCS 서술형에서 ATT&CK 전술로 바뀐다.

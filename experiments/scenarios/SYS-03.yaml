@@ -1,0 +1,101 @@
+id: SYS-03
+title: 학습모듈의 백업 3형태 (일반 상식과 다른 분류)
+role: sys-sec-ops
+type: verify
+chapter: 8
+ncs: 시스템 보안 운영 학습 4-2 (p.73)
+exam: 2025 과정평가 시스템보안운영 문항5 과제2
+prompt: 24시간 무중단 IPS 관리 콘솔에 긴급 보안 패치를 적용해야 합니다. 패치 실패에 대비한 백업 계획을 세워 주세요. 백업 형태(범위)를 세 가지로 나눠 각각 설명하고, 이번 패치에 무엇을
+  쓸지 정해 주세요.
+fixtures:
+  asset_inventory:
+  - asset: neobank
+    ip: 10.20.40.11
+    zone: int
+    importance: 상
+    owner: app-sec-ops
+    desc: 인터넷뱅킹 웹앱(Flask)
+  - asset: govportal
+    ip: 10.20.40.12
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 민원 포털
+  - asset: mediforum
+    ip: 10.20.40.13
+    zone: int
+    importance: 중
+    owner: app-sec-ops
+    desc: 의료 커뮤니티
+  - asset: adminconsole
+    ip: 10.20.40.14
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 관리 콘솔
+  - asset: db-main
+    ip: 10.20.40.50
+    zone: int
+    importance: 상
+    owner: sys-sec-ops
+    desc: 업무 DB(MySQL)
+  - asset: web
+    ip: 10.20.32.80
+    zone: dmz
+    importance: 상
+    owner: app-sec-ops
+    desc: Apache + ModSecurity CRS 리버스 프록시(WAF)
+  - asset: fw
+    ip: 10.20.30.1
+    zone: ext/pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: nftables 방화벽
+  - asset: ips
+    ip: 10.20.31.2
+    zone: pipe
+    importance: 상
+    owner: nw-sec-ops
+    desc: Suricata IPS
+  - asset: siem
+    ip: 10.20.32.10
+    zone: dmz
+    importance: 상
+    owner: soc-analyst
+    desc: Wazuh 매니저
+  - asset: scanner-01
+    ip: 10.20.32.50
+    zone: dmz
+    importance: 하
+    owner: diag-consultant
+    desc: 허가된 취약점 점검 서버
+    window: 매주 화 02:00-04:00
+  backup_status:
+    ips:
+      last_backup: '2026-10-01'
+      note: 백업 담당 기록 외 상세 없음
+expect:
+  skills_required:
+  - ncs-sysops-42-update-apply
+  answer_must:
+  - 특정 파일
+  - 전체 시스템
+  - 스냅샷
+  - 결론
+  - 근거
+  - 한계
+variants:
+- id: S0
+  description: 스킬 폴더 전체 제거. 모델의 일반 지식과 CLAUDE.md만으로 일한다.
+  ops:
+  - file: .claude/skills
+    delete: true
+  expect_replace: true
+  expect_diff: '스킬이 없으면 학습모듈 분류(특정 파일·폴더 / 전체 시스템 초기 / 변경 사항 스냅샷)가 나오지 않는다. haiku 1회: 예상한 전체·증분·차등도 아니고 "전체 이미지
+    / 설정·구성 / 패키지·바이너리"라는 제3의 분류를 만들었고, 한계에 스킬을 불러오지 못했다고 밝혔다. 지식이 어디서 오는지 보여 주는 실험.'
+  expect:
+    no_skills: true
+    answer_must_not:
+    - 특정 파일
+    answer_must:
+    - 한계
