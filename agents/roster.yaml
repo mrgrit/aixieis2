@@ -1,0 +1,265 @@
+# KT66: every worker job creates a new authenticated CLI session.
+# No API-key auth, direct model APIs or automatic API fallback.
+version: 1
+defaults:
+  runtime: claude
+  autonomy: L1
+  model: cc-haiku
+endpoints:
+  claude-code:
+    via: cli
+    launcher: ./agents/cc-session <worker>
+  codex-cli:
+    via: cli
+    launcher: codex exec
+models:
+  cc-opus:
+    endpoint: claude-code
+    name: opus
+    tier: frontier
+    note: Claude Code subscription session; usage limits apply
+  cc-sonnet:
+    endpoint: claude-code
+    name: sonnet
+    tier: reasoning
+    note: Claude Code subscription session; usage limits apply
+  cc-haiku:
+    endpoint: claude-code
+    name: haiku
+    tier: small
+    note: Claude Code subscription session; usage limits apply
+  codex-default:
+    endpoint: codex-cli
+    name: default
+    tier: reasoning
+    note: New ChatGPT-authenticated Codex session; CLI default model; usage limits apply
+  codex-research:
+    endpoint: codex-cli
+    name: gpt-6-astra
+    tier: frontier
+    reasoning_effort: high
+    note: ChatGPT 구독 CLI · 역할별 모델/추론 등급 고정 · 사용량은 실행 증적으로 측정
+  codex-evaluation:
+    endpoint: codex-cli
+    name: gpt-6-sol
+    tier: reasoning
+    reasoning_effort: medium
+    note: ChatGPT 구독 CLI · 역할별 모델/추론 등급 고정 · 사용량은 실행 증적으로 측정
+  codex-watch:
+    endpoint: codex-cli
+    name: gpt-6-luna
+    tier: small
+    reasoning_effort: medium
+    note: ChatGPT 구독 CLI · 역할별 모델/추론 등급 고정 · 사용량은 실행 증적으로 측정
+runtimes:
+  claude:
+    name: Claude Code
+    loop: scheduler
+    memory: session evidence
+    sandbox: policy-enforced MCP tools
+    note: Fresh claude.ai session for each job
+  codex:
+    name: Codex
+    loop: scheduler
+    memory: session evidence
+    sandbox: read-only shell; policy-enforced MCP tools
+    note: Fresh ChatGPT-authenticated codex exec session for each job
+
+workers:
+  # ── B1 시설 / 1F 물리보안 ────────────────────────────────────────────
+  - id: facility-engineer
+    security_role: facility
+    name: 시설 담당(전기/기계)
+    floor: B1
+    zone: ot
+    # 원래는 hermes 였다 — 주기 점검이 많아 cron 이 있는 쪽이 맞다는 판단이었다. 그런데
+    # hermes 는 이 랩에 설치돼 있지 않아 **도는 몸이 없었다**: cadence 를 적어 둔 루프를
+    # 아무도 깨우지 않았다. 지금은 구독 CC 세션으로 옮기고, cadence 대신 cc-runner 가
+    # 경보로 깨운다. 주기 점검과 사건 대응 중 무엇이 이 자리에 맞는지는 W15 에서 비교한다.
+    runtime: claude
+    autonomy: L2
+    team: cooling-team
+    model: cc-sonnet          # 신호 여러 개를 읽어 인과를 잇는 일이다
+    loops: [env-health-sweep, power-capacity-check]
+    assets: [ups, pdu, crac, chiller, fm200]
+    curriculum: [W1, W5, W13]
+
+  - id: physical-security
+    security_role: physical
+    name: 물리보안(출입/CCTV)
+    floor: 1F
+    zone: ot
+    # 접수자가 보안 사건에서 가장 먼저 부르는 자리다. hermes 는 설치돼 있지 않아
+    # 배정을 받고도 세션이 뜨지 않았다 — 배정만 되고 아무도 안 오는 것이 제일 나쁘다.
+    runtime: claude
+    autonomy: L1
+    team: physical-team
+    model: cc-haiku           # 출입·CCTV 로그 대조. 양이 많고 판단은 단순하다
+    loops: [access-log-review]
+    assets: [access-control, cctv]
+    curriculum: [W5, W13, W14]
+
+  # ── 2F 일반 전산실 ────────────────────────────────────────────
+  - id: network-engineer
+    security_role: network
+    name: 네트워크 엔지니어
+    floor: 2F
+    zone: dmz
+    runtime: codex
+    autonomy: L2
+    team: network-team
+    model: codex-default
+    loops: [firewall-drift-check]
+    assets: [kt66-fw, kt66-ips, kt66-web]
+    curriculum: [W2, W9, W11]
+
+  - id: systems-engineer
+    security_role: systems
+    name: 시스템/스토리지 엔지니어
+    floor: 2F
+    zone: int
+    runtime: codex
+    autonomy: L2
+    team: systems-team
+    model: codex-default
+    loops: [backup-verify, disk-capacity-check]
+    assets: [kt66-neobank, kt66-govportal, kt66-mediforum, kt66-adminconsole, kt66-aicompanion, kt66-windows-user]
+    curriculum: [W7, W9, W10, W12]
+
+  # ── 3F AI 전산실 ──────────────────────────────────────────────
+  - id: gpu-platform-engineer
+    security_role: gpu
+    name: GPU/플랫폼 엔지니어
+    floor: 3F
+    zone: app
+    runtime: codex
+    autonomy: L2
+    team: gpu-team
+    model: codex-default
+    loops: [gpu-quota-review, inference-sla-watch]
+    assets: [dgx-spark-01, dgx-01, dgx-02, dgx-03, dgx-06, thor-02, thor-03, ollama, model-registry]
+    curriculum: [W3, W7, W12]
+
+  # ── 4F 운영층 (NOC/SOC) ───────────────────────────────────────
+  - id: service-desk
+    security_role: coordinator
+    name: 서비스데스크
+    floor: 4F
+    zone: mgmt
+    # 접수 담당이다 — 사건이 나면 **가장 먼저** 불린다(cc-runner). 정적 트리거로 담당이
+    # 안 잡히거나 여러 도메인에 걸치면 여기서 분류하고 배정한다. 그래서 도는 몸이 있어야
+    # 한다: hermes 는 설치돼 있지 않으므로 구독 CC 세션으로 둔다.
+    runtime: claude
+    autonomy: L2
+    team: servicedesk-team
+    model: cc-haiku           # 분류와 배정이다. 깊이보다 회전이 중요하다
+    loops: [ticket-triage]
+    assets: [itsm, cmdb]
+    curriculum: [W6, W8, W9]
+
+  - id: soc-analyst
+    security_role: soc
+    name: SOC 분석가
+    floor: XOC
+    zone: mgmt
+    runtime: claude
+    autonomy: L1
+    team: soc-team
+    model: cc-sonnet          # 흩어진 로그에서 인과를 잇는 일이다
+    loops: [siem-alert-triage, soc-daily-risk-review]
+    assets: [kt66-siem, kt66-wazuh-indexer, kt66-wazuh-dashboard]
+    curriculum: [W11, W12, W14]
+
+  - id: ops-lead
+    security_role: reviewer
+    name: 운영 리드
+    floor: 4F
+    zone: mgmt
+    runtime: claude           # 판정은 읽고 따지는 일이다 — CC 세션이 맞다
+    autonomy: approver        # 스스로 실행하지 않는다. L2 요청을 판정만 한다
+    team: ops-lead-team
+    model: cc-opus            # 판정이 일이다. 여기서 아끼면 승인이 형식이 된다
+    loops: []
+    assets: []
+    curriculum: [W6, W8, W9, W15]
+
+  - id: compliance-auditor
+    security_role: auditor
+    name: 컴플라이언스 감사인
+    floor: 4F
+    zone: mgmt
+    runtime: claude
+    autonomy: L1              # 감사인은 관찰자다. 상태를 바꾸지 않는다
+    team: audit-team
+    model: cc-sonnet          # 통제 항목 × 로그. 판단보다 읽는 양이 많다
+    loops: [evidence-collection]
+    assets: [audit-log, cmdb]
+    curriculum: [W14]
+
+  # 개발자는 운영 시스템 접근 없이 요청 산출물만 제작한다.
+  - id: application-developer
+    security_role: developer
+    name: 애플리케이션 개발자
+    floor: 4F
+    zone: mgmt
+    runtime: codex
+    autonomy: L1
+    team: systems-team
+    model: codex-default
+    loops: []
+    assets: [request-workspace]
+    curriculum: [W8, W10, W14]
+  - id: skill-researcher
+    name: 스킬 연구원
+    security_role: research
+    floor: 5F
+    zone: mgmt
+    team: research-team
+    runtime: codex
+    model: codex-research
+    autonomy: L1
+    loops:
+      - skill-research-daily
+    assets:
+      - skill-candidates
+      - public-research
+    curriculum:
+      - W10
+      - W14
+      - W15
+  - id: skill-evaluator
+    name: 스킬 평가원
+    security_role: evaluation
+    floor: 5F
+    zone: mgmt
+    team: evaluation-team
+    runtime: codex
+    model: codex-evaluation
+    autonomy: L1
+    loops:
+      - skill-evaluation-watch
+    assets:
+      - skill-benchmarks
+      - evaluation-evidence
+    curriculum:
+      - W10
+      - W14
+      - W15
+  - id: agent-supervisor
+    name: AI 에이전트 관제원
+    security_role: supervision
+    floor: XOC
+    zone: mgmt
+    team: agent-control-team
+    runtime: codex
+    model: codex-watch
+    autonomy: L1
+    loops:
+      - agent-risk-watch
+    assets:
+      - agent-evidence
+      - xoc-findings
+    curriculum:
+      - W10
+      - W14
+      - W15

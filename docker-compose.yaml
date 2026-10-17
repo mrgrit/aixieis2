@@ -1,0 +1,1021 @@
+name: kt66
+
+# ─────────────────────────────────────────────────────────────
+# kt66 — 3-tier chained topology: ext -> pipe -> dmz (+ int backend)
+# Enforced packet flow:  attacker(.202) -> fw -> ips -> waf(web/ModSec) -> app
+#
+# 출처 IP 보존 설계 (NAT 출처추적 결함 제거):
+#   - HAProxy 제거: fw 는 L3 포트분기 DNAT 만 (L7 종료 안 함)
+#   - ips masquerade 제거: 데이터경로 출처 IP 가 web/ModSec 까지 그대로 도달
+#   - daemon.json userland-proxy=false: 호스트 .161 publish DNAT 가 출처 보존
+#   - web(ModSec) 만 종료 → WAF 가 진짜 공격자(.202)를 로깅/차단
+#
+# 외부 노출:                        웹 진입만 ${WEB_HOST_IP} 에 publish.
+#                                  kt66.sh up 이 VM 실제 IP 를 자동감지→.env(WEB_HOST_IP) 기록
+#                                  (강의실 DHCP 브리지 VM: 학생 hosts kt66.lab→VM_IP 와 일치).
+#                                  미설정 시 0.0.0.0(모든 인터페이스). 레거시 2-NIC 는
+#                                  WEB_HOST_IP=192.168.0.161 명시.
+# 내부 GUI 바인딩:                 SIEM/대시보드/보안콘솔/관제화면은 ${INT_HOST_IP} 에 publish.
+#                                  기본값은 dummy NIC(192.168.136.145) — 호스트 브라우저 전용 격리.
+#                                  .env 에서 LAN IP 로 바꾸면 강의실 LAN 에 전부 노출된다(의도적 선택).
+# 외부 공격자:                      별도 VM (레거시 192.168.0.202) 또는 VM 내부 kt66-attacker 컨테이너
+# Windows:                         보류 (추후 독립 HW)
+# ─────────────────────────────────────────────────────────────
+
+x-web-host: &web_host "0.0.0.0"      # 실제 바인딩은 ${WEB_HOST_IP} — .env 참조
+x-int-host: &int_host "192.168.136.145"   # 기본값(dummy NIC). 실제 바인딩은 ${INT_HOST_IP} — .env 참조
+
+# 시각(타임존) 통일 — 전체 컨테이너 KST(Asia/Seoul). 배포 시부터 로그 타임스탬프 일관성.
+#   · 우리 빌드 이미지: Dockerfile 에 tzdata + /etc/localtime 심볼릭링크 내장(호스트 무관).
+#   · 서드파티 이미지(juiceshop/dvwa/wazuh-*): TZ env + zoneinfo 마운트로 KST 강제.
+#     마운트 소스는 zoneinfo 실파일 → 호스트 TZ 와 무관하게 항상 Asia/Seoul 로 고정.
+x-tz: &tz "Asia/Seoul"
+x-tz-localtime: &tz_localtime "/usr/share/zoneinfo/Asia/Seoul:/etc/localtime:ro"
+
+services:
+
+  # ╭─ 호스트 글루 (한 번 돌고 끝난다) ────────────────────────╮
+  # kt66 의 존 체인은 호스트 커널 설정 하나에 매달려 있다:
+  #   net.bridge.bridge-nf-call-iptables=0
+  # 이게 1 이면 docker 의 per-network MASQUERADE 가 fw 의 DNAT 뒷다리를 잡아
+  # **게시 포트 전부가 조용히 타임아웃**한다(사유는 kt66-net.sh 머리말 ★).
+  # 그리고 이 값은 **docker 데몬이 뜰 때마다 1 로 되돌아간다.** sysctl.conf 에
+  # 적어 두어도 소용없다 — docker 가 나중에 덮기 때문이다.
+  #
+  # 예전에는 학생이 sudo ./kt66-net.sh 를 기억해서 돌려야 했다. 기억에 기대는
+  # 설계는 반드시 실패하고, 실패했을 때 증상이 "WAF 가 로그를 안 남긴다"로
+  # 보이기 때문에 학생은 엉뚱한 곳을 반나절 판다. 그래서 기동에 붙였다.
+  #
+  # privileged 인 이유: 호스트 netns 의 /proc/sys 에 써야 한다(컨테이너 기본은 ro).
+  # 한 번 실행하고 즉시 종료한다 — 상시 떠 있는 특권 컨테이너가 아니다.
+  netglue:
+    container_name: kt66-netglue
+    build:
+      context: .
+      dockerfile: fw/Dockerfile
+    image: kt66-fw
+    network_mode: host
+    privileged: true
+    entrypoint: ["/bin/bash", "/kt66-net.sh"]
+    volumes:
+      - ./kt66-net.sh:/kt66-net.sh:ro
+    restart: "no"
+
+  # ╭─ ext tier ─────────────────────────────────────────────╮
+  bastion:
+    container_name: kt66-bastion
+    build:
+      context: .
+      dockerfile: bastion/Dockerfile
+    hostname: bastion
+    dns: [10.20.32.53]
+    networks:
+      ext:
+        ipv4_address: 10.20.30.201
+    ports:
+      - "${PORT_BASTION_SSH:-2204}:22"
+    cap_add: [NET_ADMIN]
+    environment:
+      SSH_USER: ${SSH_USER:-ccc}
+      SSH_PASS: ${SSH_PASS:-ccc}
+      API_KEY: ${API_KEY:?Set API_KEY in .env}
+      # Ollama 는 외부 GPU 서버 — .env 의 LLM_BASE_URL 로 지정 (로컬 모델 적재 없음).
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MANAGER_MODEL: ${LLM_MANAGER_MODEL}
+      LLM_SUBAGENT_MODEL: ${LLM_SUBAGENT_MODEL}
+      DEFAULT_GW: 10.20.30.1
+    extra_hosts:
+      - "juice.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "dvwa.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "neobank.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "govportal.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "mediforum.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "adminconsole.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "aicompanion.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "siem.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+    volumes:
+      - bastion-data:/var/lib/bastion
+      - bastion-ssh-host:/var/lib/bastion/ssh-host-keys
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./keys:/keys:ro
+    restart: unless-stopped
+
+  # 내부 발판 침입자(insider) — ext 망에서 출발. 외부 공격자(outsider)는 별도 VM(.202).
+  attacker:
+    container_name: kt66-attacker
+    build:
+      context: .
+      dockerfile: attacker/Dockerfile
+    hostname: attacker
+    dns: [10.20.32.53]
+    networks:
+      ext:
+        ipv4_address: 10.20.30.202
+    ports:
+      - "${PORT_ATTACKER_SSH:-2202}:22"
+    cap_add: [NET_ADMIN]
+    environment:
+      SSH_USER: ${SSH_USER:-ccc}
+      SSH_PASS: ${SSH_PASS:-ccc}
+      DEFAULT_GW: 10.20.30.1
+    extra_hosts:
+      - "juice.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "dvwa.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "neobank.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "govportal.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "mediforum.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "adminconsole.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "aicompanion.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+      - "siem.${LAB_DOMAIN:-kt66.lab}:10.20.30.1"
+    volumes:
+      - attacker-home:/home/ccc
+      - attacker-ssh-host:/var/lib/ssh-host-keys
+      - ./keys:/keys:ro
+    restart: unless-stopped
+
+  # ╭─ Edge router: ext <-> pipe (HAProxy 제거 → L3 포트분기 DNAT) ──╮
+  # 웹 진입: 호스트 .161 의 포트 → fw → ips → web(ModSec) → app.
+  #   .161:80    -> 기본(Host 헤더 vhost)         .161:8001 -> juice
+  #   .161:8002  -> dvwa     .161:8003 -> neobank  .161:8004 -> govportal
+  #   .161:8005  -> mediforum .161:8006 -> adminconsole .161:8007 -> aicompanion
+  fw:
+    container_name: kt66-fw
+    build:
+      context: .
+      dockerfile: fw/Dockerfile
+    hostname: fw
+    networks:
+      ext:
+        ipv4_address: 10.20.30.1
+        aliases: [secu, kt66-secu]
+      pipe:
+        ipv4_address: 10.20.31.1
+        aliases: [secu, kt66-secu]
+    # 게시 포트는 .env 로 바꿀 수 있다. 컨테이너 안쪽(8001~8007)은 고정이고
+    # **호스트 쪽만** 옮긴다 — fw 의 DNAT 규칙과 문서를 건드리지 않기 위해서다.
+    #
+    # 다만 옮기는 것은 최후의 수단이다. 이 포트들은 자산 대장(assets.yaml)의
+    # web: 필드와 학생 hosts 파일에 그대로 적혀 있어서, 옮기면 관제 화면의 링크가
+    # 죽고 학생이 다른 주소를 외워야 한다.
+    #
+    # 실제 사례: 이 서버에서 호스트의 bastion-api.service 가 0.0.0.0:8003 을 잡고
+    # 있어 8003(NeoBank)과 부딪혔다. 처음엔 kt66 을 8103 으로 비켰는데, 그러면
+    # 대장의 http://${WEB_HOST}:8003/ 링크가 깨진다. 상대를 127.0.0.1 로 묶는 것이
+    # 옳은 해법이었다 — **주소가 다르면 같은 포트를 함께 쓸 수 있다.**
+    ports:
+      - "${WEB_HOST_IP:-0.0.0.0}:${PORT_SITE_HTTP:-80}:80"
+      - "${WEB_HOST_IP:-0.0.0.0}:${PORT_SITE_HTTPS:-443}:443"
+      - "${WEB_HOST_IP:-0.0.0.0}:${PORT_SITE1:-8001}:8001"
+      - "${WEB_HOST_IP:-0.0.0.0}:${PORT_SITE2:-8002}:8002"
+      - "${WEB_HOST_IP:-0.0.0.0}:${PORT_SITE3:-8003}:8003"
+      - "${WEB_HOST_IP:-0.0.0.0}:${PORT_SITE4:-8004}:8004"
+      - "${WEB_HOST_IP:-0.0.0.0}:${PORT_SITE5:-8005}:8005"
+      - "${WEB_HOST_IP:-0.0.0.0}:${PORT_SITE6:-8006}:8006"
+      - "${WEB_HOST_IP:-0.0.0.0}:${PORT_SITE7:-8007}:8007"
+      - "${INT_HOST_IP:-127.0.0.1}:25:25"
+      - "${INT_HOST_IP:-127.0.0.1}:587:587"
+      - "${INT_HOST_IP:-127.0.0.1}:993:993"
+      - "${WEB_HOST_IP:-127.0.0.1}:8091:8091"
+      - "${WEB_HOST_IP:-0.0.0.0}:9100:9100"   # bastion API (관리)
+      # ── INT_HOST_IP 기본값 주의 ────────────────────────────────────────────
+      # 예전 기본값은 192.168.136.145(el34 에서 물려받은 dummy NIC)였다. .env 에 값을
+      # 안 적고 배포하면 관제·주입기·SIEM 이 **아무도 못 닿는 IP** 에 묶여, 컨테이너는
+      # 멀쩡한데 화면만 안 열린다. 새 서버 배포에서 실제로 그렇게 됐다.
+      # 이제 기본은 0.0.0.0 — 안 적으면 열린다. 격리를 원하면 .env 에 적는다(그게 의도다).
+      # kt66.sh up 은 .env 에 웹 진입 IP 를 자동으로 적어 준다.
+      - "${INT_HOST_IP:-0.0.0.0}:8081:8080"      # fw 보안콘솔 GUI — INT_HOST_IP 바인딩
+    cap_add: [NET_ADMIN, NET_RAW]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    environment:
+      SSH_USER: ${SSH_USER:-ccc}
+      SSH_PASS: ${SSH_PASS:-ccc}
+      WAZUH_MANAGER: 10.20.32.100
+      IPS_PIPE_IP: 10.20.31.2
+      WEB_DMZ_IP: 10.20.32.80        # DNAT 대상(web/ModSec)
+      BASTION_API_IP: 10.20.30.201
+    volumes:
+      - ./keys:/keys:ro
+      - ./endpoints/user-network.sh:/opt/kt66-user-network.sh:ro
+      - ./fw/entrypoint.sh:/entrypoint.sh:ro
+    restart: unless-stopped
+
+  # ╭─ IPS: pipe <-> dmz (Suricata inline + ip_forward, masquerade 제거) ──╮
+  ips:
+    container_name: kt66-ips
+    build:
+      context: .
+      dockerfile: ips/Dockerfile
+    hostname: ips
+    networks:
+      pipe:
+        ipv4_address: 10.20.31.2
+      dmz:
+        ipv4_address: 10.20.32.1
+      app:
+        ipv4_address: 10.20.50.1      # 3F GPU 존 게이트웨이 — 존 밖 트래픽은 반드시 여기를 지난다
+      ot:
+        ipv4_address: 10.20.60.1      # B1·1F 시설망(OT) 게이트웨이. IT 망과 분리 — 실제 DC 구조다
+      user:
+        ipv4_address: 10.20.70.1
+    cap_add: [NET_ADMIN, NET_RAW]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    environment:
+      SSH_USER: ${SSH_USER:-ccc}
+      SSH_PASS: ${SSH_PASS:-ccc}
+      WAZUH_MANAGER: 10.20.32.100
+      FW_PIPE_IP: 10.20.31.1
+      PRESERVE_SRC_IP: "1"           # 데이터경로 masquerade 비활성 (출처 보존)
+    ports:
+      - "${INT_HOST_IP:-0.0.0.0}:8082:8080"  # ips 보안콘솔 GUI — INT_HOST_IP 바인딩
+    volumes:
+      - ips-suricata-logs:/var/log/suricata
+      - ./keys:/keys:ro
+      - ./endpoints/user-network.sh:/opt/kt66-user-network.sh:ro
+      - ./ips/entrypoint.sh:/entrypoint.sh:ro
+    depends_on:
+      - fw
+    restart: unless-stopped
+
+  # 선택 설치: Linux 컨테이너 안의 KVM Windows 평가판 VM. 네이티브 Windows 컨테이너가 아니다.
+  windows-user:
+    profiles: [windows]
+    container_name: kt66-windows-user
+    image: ${WINDOWS_IMAGE:-dockurr/windows:latest}
+    hostname: windows-user
+    devices: [/dev/kvm, /dev/net/tun]
+    cap_add: [NET_ADMIN]
+    networks:
+      user:
+        ipv4_address: 10.20.70.10
+    dns: [10.20.32.53]
+    environment:
+      VERSION: "11l"
+      LANGUAGE: Korean
+      TZ: Asia/Seoul
+      RAM_SIZE: "4G"
+      CPU_CORES: "2"
+      DISK_SIZE: "64G"
+      USERNAME: kt66student
+      PASSWORD: ${WINDOWS_PASSWORD:-}
+      HOST: KT66-WIN-01
+      PROTECT: "Y"
+      SAMBA: "N"
+      LOG: "Y"
+    entrypoint: [/bin/bash, /opt/kt66-windows-entrypoint.sh]
+    volumes:
+      - windows-user-data:/storage
+      - ./endpoints/windows/media/windows-eval.iso:/custom.iso:ro
+      - ./endpoints/windows/entrypoint.sh:/opt/kt66-windows-entrypoint.sh:ro
+      - ./endpoints/windows/oem:/oem:ro
+    stop_grace_period: 2m
+    restart: unless-stopped
+
+  # internal 브리지의 포트 publish는 Docker가 생략한다. 관리 NIC에만 프록시를 바인딩한다.
+  windows-console:
+    profiles: [windows]
+    container_name: kt66-windows-console
+    image: ${WINDOWS_CONSOLE_IMAGE:-nginx:alpine}
+    network_mode: host
+    user: "101:101"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    environment:
+      CONSOLE_BIND: ${INT_HOST_IP:-127.0.0.1}
+      CONSOLE_PORT: ${PORT_WINDOWS_CONSOLE:-8090}
+    entrypoint: [/bin/sh, /opt/console-entrypoint.sh]
+    volumes:
+      - ./endpoints/windows/console-entrypoint.sh:/opt/console-entrypoint.sh:ro
+      - ./endpoints/windows/console.conf.template:/opt/console.conf.template:ro
+    restart: unless-stopped
+
+  # ╭─ DMZ tier: WAF(web/ModSec) + 관리/SIEM 서비스 ──────────╮
+  web:
+    container_name: kt66-web
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    hostname: web
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.80
+      int:
+        ipv4_address: 10.20.40.80
+    cap_add: [NET_ADMIN]
+    environment:
+      SSH_USER: ${SSH_USER:-ccc}
+      SSH_PASS: ${SSH_PASS:-ccc}
+      WAZUH_MANAGER: 10.20.32.100
+      LAB_DOMAIN: ${LAB_DOMAIN:-kt66.lab}
+      DEFAULT_GW: 10.20.32.1   # via ips — 출처(.202)로의 응답 경로
+    ports:
+      - "${INT_HOST_IP:-0.0.0.0}:8083:8080"  # WAF(ModSec) 보안콘솔 GUI — INT_HOST_IP 바인딩
+    volumes:
+      - web-apache-logs:/var/log/apache2
+      - ./keys:/keys:ro
+      # 랜딩 페이지와 vhost 는 이미지에도 구워져 있지만(Dockerfile 의 COPY) 여기서 덮어쓴다.
+      # web 이미지는 apt 로 Apache·ModSecurity·CRS·osquery·Wazuh agent 를 다 받는다 —
+      # 링크 한 줄 고치려고 그걸 다시 굽게 하면 아무도 안 고친다.
+      # 랜딩은 새로고침으로 반영된다. vhost 변경은 configure-domain.py 실행 후 Apache graceful이 필요하다.
+      # 이미지 안의 사본은 그대로 두었다: 이 저장소 없이 이미지만 돌려도 랜딩은 떠야 한다.
+      # ⚠ sites-available 통째로 덮으므로 저장소의 vhost 집합이 곧 활성 집합이다
+      #   (a2ensite 심볼릭 링크는 sites-enabled 에 있고 빌드 때 걸린다 — 파일을 새로
+      #   추가하면 이미지를 다시 구워야 활성화된다).
+      - ./web/entrypoint.sh:/entrypoint.sh:ro
+      - ./web/configure-domain.py:/opt/kt66-configure-domain.py:ro
+      - ./ui:/opt/kt66-ui:ro
+      - ./web/landing:/var/www/landing:ro
+      - ./web/vhosts:/etc/apache2/sites-available:ro
+      - ./web/request-rules:/etc/modsecurity/kt66-requests:ro
+      - ./web/request-rules.conf:/etc/modsecurity/kt66-requests.conf:ro
+    depends_on:
+      - ips
+      - juiceshop
+      - dvwa
+      - neobank
+      - govportal
+      - mediforum
+      - adminconsole
+      - aicompanion
+    restart: unless-stopped
+
+  # 실제 SMTP/IMAP 사서함 + 웹메일. 인터넷 수신자 릴레이는 인증 여부와 무관하게 거부.
+  mail:
+    container_name: kt66-mail
+    build:
+      context: .
+      dockerfile: mail/Dockerfile
+    hostname: mail
+    environment:
+      LAB_DOMAIN: ${LAB_DOMAIN:-kt66.lab}
+      TZ: Asia/Seoul
+    cap_add: [NET_ADMIN]
+    dns: [10.20.32.53]
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.25
+        aliases: ["mail.${LAB_DOMAIN:-kt66.lab}"]
+    volumes:
+      - ./mail/accounts.json:/config/accounts.json:ro
+      - mail-data:/var/mail/vhosts
+      - mail-queue:/var/spool/postfix
+      - mail-tls:/var/lib/kt66-mail
+    healthcheck:
+      test: [CMD, python3, /opt/kt66-mail/health.py]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on: [lab-dns]
+    restart: unless-stopped
+
+  webmail:
+    container_name: kt66-webmail
+    image: ${ROUNDCUBE_IMAGE:-roundcube/roundcubemail:latest-apache}
+    hostname: webmail
+    entrypoint: [/bin/sh, /opt/kt66-webmail-entrypoint.sh]
+    command: [apache2-foreground]
+    environment:
+      LAB_DOMAIN: ${LAB_DOMAIN:-kt66.lab}
+      ROUNDCUBEMAIL_DB_TYPE: sqlite
+      ROUNDCUBEMAIL_DEFAULT_HOST: ssl://mail
+      ROUNDCUBEMAIL_DEFAULT_PORT: 993
+      ROUNDCUBEMAIL_SMTP_SERVER: tls://mail
+      ROUNDCUBEMAIL_SMTP_PORT: 587
+      ROUNDCUBEMAIL_USERNAME_DOMAIN: ${LAB_DOMAIN:-kt66.lab}
+      ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE: 10M
+      ROUNDCUBEMAIL_PLUGINS: archive,zipdownload
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.26
+    volumes:
+      - ./mail/webmail-entrypoint.sh:/opt/kt66-webmail-entrypoint.sh:ro
+      - ./mail/roundcube:/var/roundcube/config:ro
+      - webmail-db:/var/roundcube/db
+      - mail-tls:/mail-tls:ro
+    secrets: [kt66_roundcube_seed]
+    depends_on:
+      mail:
+        condition: service_healthy
+    restart: unless-stopped
+
+  lab-dns:
+    container_name: kt66-dns
+    build:
+      context: .
+      dockerfile: dns/Dockerfile
+    hostname: lab-dns
+    cap_add: [NET_ADMIN]
+    volumes:
+      - ./deployment/runtime:/config:ro
+    ports:
+      - "${WEB_HOST_IP:-127.0.0.1}:53:1053/udp"
+      - "${WEB_HOST_IP:-127.0.0.1}:53:1053/tcp"
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.53
+    restart: unless-stopped
+
+  wazuh-indexer:
+    container_name: kt66-wazuh-indexer
+    image: wazuh/wazuh-indexer:4.10.0
+    hostname: wazuh.indexer
+    environment:
+      OPENSEARCH_JAVA_OPTS: "-Xms1g -Xmx1g"
+      TZ: *tz
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+      nofile: { soft: 65536, hard: 65536 }
+    volumes:
+      - *tz_localtime
+      - wazuh-indexer-data:/var/lib/wazuh-indexer
+      - ./wazuh-config/certs/root-ca.pem:/usr/share/wazuh-indexer/certs/root-ca.pem
+      - ./wazuh-config/certs/wazuh.indexer-key.pem:/usr/share/wazuh-indexer/certs/wazuh.indexer.key
+      - ./wazuh-config/certs/wazuh.indexer.pem:/usr/share/wazuh-indexer/certs/wazuh.indexer.pem
+      - ./wazuh-config/certs/admin.pem:/usr/share/wazuh-indexer/certs/admin.pem
+      - ./wazuh-config/certs/admin-key.pem:/usr/share/wazuh-indexer/certs/admin-key.pem
+      - ./wazuh-config/wazuh_indexer.yml:/usr/share/wazuh-indexer/opensearch.yml
+      - ./wazuh-config/internal_users.yml:/usr/share/wazuh-indexer/opensearch-security/internal_users.yml
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.110
+        aliases: [wazuh.indexer, wazuh-indexer]
+    restart: unless-stopped
+
+  siem:
+    container_name: kt66-siem
+    build:
+      context: .
+      dockerfile: siem/Dockerfile
+    image: kt66-siem:custom
+    hostname: wazuh.manager
+    depends_on: [wazuh-indexer]
+    environment:
+      # Wazuh analysisd 는 alerts.json timestamp 오프셋을 PID1 의 TZ env 로 반영
+      # (/etc/localtime 만으로는 UTC 로 기록됨). 이미지 ENV TZ 와 이중 안전장치.
+      TZ: *tz
+      INDEXER_URL: https://wazuh.indexer:9200
+      INDEXER_USERNAME: admin
+      INDEXER_PASSWORD: SecretPassword
+      FILEBEAT_SSL_VERIFICATION_MODE: full
+      SSL_CERTIFICATE_AUTHORITIES: /etc/ssl/root-ca.pem
+      SSL_CERTIFICATE: /etc/ssl/filebeat.pem
+      SSL_KEY: /etc/ssl/filebeat.key
+      API_USERNAME: wazuh-wui
+      API_PASSWORD: MyS3cr37P450r.*-
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+      nofile: { soft: 655360, hard: 655360 }
+    volumes:
+      - wazuh-manager-etc:/var/ossec/etc
+      - wazuh-manager-logs:/var/ossec/logs
+      - wazuh-manager-queue:/var/ossec/queue
+      - wazuh-manager-var:/var/ossec/var
+      - ./wazuh-config/certs/root-ca-manager.pem:/etc/ssl/root-ca.pem
+      - ./wazuh-config/certs/wazuh.manager.pem:/etc/ssl/filebeat.pem
+      - ./wazuh-config/certs/wazuh.manager-key.pem:/etc/ssl/filebeat.key
+      - ./keys:/keys:ro
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.100
+        aliases: [siem, wazuh.manager, wazuh-manager]
+    restart: unless-stopped
+
+  wazuh-dashboard:
+    container_name: kt66-wazuh-dashboard
+    image: wazuh/wazuh-dashboard:4.10.0
+    hostname: wazuh.dashboard
+    depends_on: [wazuh-indexer, siem]
+    environment:
+      INDEXER_USERNAME: admin
+      INDEXER_PASSWORD: SecretPassword
+      WAZUH_API_URL: https://wazuh.manager
+      DASHBOARD_USERNAME: kibanaserver
+      DASHBOARD_PASSWORD: kibanaserver
+      API_USERNAME: wazuh-wui
+      API_PASSWORD: MyS3cr37P450r.*-
+      TZ: *tz
+    volumes:
+      - *tz_localtime
+      - ./wazuh-config/certs/wazuh.dashboard.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem
+      - ./wazuh-config/certs/wazuh.dashboard-key.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem
+      - ./wazuh-config/certs/root-ca.pem:/usr/share/wazuh-dashboard/certs/root-ca.pem
+      - ./wazuh-config/opensearch_dashboards.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+      - ./wazuh-config/wazuh.yml:/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml
+    # SIEM 대시보드 — INT_HOST_IP 에 바인딩(기본 0.0.0.0). 격리하려면 .env 에서 지정.
+    ports:
+      - "${INT_HOST_IP:-0.0.0.0}:5601:5601"
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.120
+        aliases: [wazuh.dashboard, wazuh-dashboard]
+    restart: unless-stopped
+
+  portal:
+    container_name: kt66-portal
+    build:
+      context: .
+      dockerfile: portal/Dockerfile
+    hostname: portal
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.50
+    ports:
+      - "${INT_HOST_IP:-0.0.0.0}:8000:8000"  # 관리 포털 — INT_HOST_IP 바인딩
+    volumes:
+      - ./envsim/assets.yaml:/app/assets.yaml:ro
+      - ./ui:/app/ui:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ips-suricata-logs:/data/suricata-logs:ro
+      - web-apache-logs:/data/apache-logs:ro
+      - bastion-data:/data/bastion-data:ro
+      - wazuh-manager-logs:/data/wazuh:ro
+    environment:
+      BASTION_API_URL: http://10.20.30.201:9100
+      BASTION_API_KEY: ${API_KEY:?Set API_KEY in .env}
+    depends_on: [siem, web]
+    restart: unless-stopped
+
+  assessor:
+    container_name: kt66-assessor
+    profiles: [assessor]
+    build:
+      context: .
+      dockerfile: assessor/Dockerfile
+    hostname: assessor
+    ports:
+      - "${INT_HOST_IP:-0.0.0.0}:9201:8000"   # 채점 접근 (내부 전용)
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.55
+        aliases: [assessor]
+    environment:
+      API_KEY: ${API_KEY:?Set API_KEY in .env}
+      USE_INDEXER: ${ASSESSOR_USE_INDEXER:-0}
+      INDEXER_URL: https://10.20.32.110:9200
+      INDEXER_USER: admin
+      INDEXER_PASS: SecretPassword
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - wazuh-manager-logs:/data/wazuh:ro
+      - ips-suricata-logs:/data/suricata-logs:ro
+      - web-apache-logs:/data/apache-logs:ro
+    depends_on: [siem, web, ips]
+    restart: unless-stopped
+
+  provisioner:
+    container_name: kt66-provisioner
+    profiles: [provisioner]
+    build:
+      context: .
+      dockerfile: assessor/Dockerfile
+    command: ["uvicorn", "assessor.provisioner:app", "--host", "0.0.0.0", "--port", "8000"]
+    hostname: provisioner
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.56
+        aliases: [provisioner]
+    environment:
+      API_KEY: ${API_KEY:?Set API_KEY in .env}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on: [siem]
+    restart: unless-stopped
+
+  # ╭─ 3F GPU 존 — DGX Spark 를 WireGuard 로 랩에 편입 ────────╮
+  # GPU 서버는 공인 IP 회선, 랩 호스트는 NAT 뒤다. macvlan(같은 L2 아님)도 단순 L3
+  # 라우팅(인바운드 불가)도 안 되므로 터널로 잇는다. 터널 너머의 DGX Spark 는
+  # 10.20.50.10 으로 3F 존의 정식 구성원이 되고, 그 트래픽은 ips 를 지난다.
+  gpu-gw:
+    container_name: kt66-gpu-gw
+    build: ./gpu-gw
+    hostname: gpu-gw
+    depends_on: [ips]
+    cap_add: [NET_ADMIN, SYS_MODULE]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    environment:
+      IPS_APP_IP: 10.20.50.1
+      LAB_CIDR: 10.20.0.0/16
+    volumes:
+      - ./gpu-gw/wg/wg0.conf:/etc/wireguard/wg0.conf:ro
+    networks:
+      app:
+        ipv4_address: 10.20.50.2
+    restart: unless-stopped
+
+  # ╭─ B1·1F 시설 계통 — 환경 시뮬레이터 (OT 망) ─────────────────╮
+  # 전력·냉방·소방·물리보안은 가상이지만 **부하는 실제다**. docker.sock 으로 컨테이너
+  # CPU 를, 터널 너머 DGX Spark 의 Ollama 로 GPU 상태를 읽어 발열을 계산한다.
+  # 그래서 3F 에 부하를 걸면 온도가 진짜로 오르고, 냉동기를 죽이면 갈 곳을 잃는다.
+  #
+  # 시설망(ot)을 IT 망과 분리한 것은 실제 DC 구조이자 그 자체로 교보재다.
+  envsim:
+    container_name: kt66-envsim
+    build: ./envsim
+    hostname: envsim
+    depends_on: [siem]
+    cap_add: [NET_ADMIN]          # 기동 시 GPU 존 경로를 ips 로 잡는다(entrypoint.sh)
+    environment:
+      SYSLOG_HOST: 10.20.32.100     # 환경 경보도 같은 SIEM 으로 — 13주차 연쇄 실습의 전제
+      SYSLOG_PORT: "514"
+      TICK_SEC: "5"
+      API_KEY: ${API_KEY:?Set API_KEY in .env}
+      TZ: Asia/Seoul
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # 자산 대장을 마운트한다. 이미지에도 구워져 있지만(Dockerfile 의 COPY) 여기서
+      # 덮어쓴다 — 그래야 학생이 대장을 고치고 **재빌드 없이 restart 만으로** 반영된다.
+      # 인프라 증설 실습에서 대장 등재는 필수 단계인데, 그때마다 이미지를 다시 굽게
+      # 하면 한 번 고치는 데 몇 분이 걸려 아무도 대장을 안 고치게 된다.
+      # 이미지 안의 사본은 그대로 둔다: 저장소 없이 이미지만 돌려도 랩은 떠야 한다.
+      - ./envsim/assets.yaml:/app/assets.yaml:ro
+      - ./envsim/facility-guide.yaml:/app/facility-guide.yaml:ro
+    ports:
+      - "${INT_HOST_IP:-0.0.0.0}:8010:8000"   # 강사/UI 접근 (내부 전용)
+    networks:
+      ot:
+        ipv4_address: 10.20.60.10
+        aliases: [envsim, facility]
+      dmz:
+        ipv4_address: 10.20.32.60   # SIEM 으로 syslog 를 보내는 다리
+    restart: unless-stopped
+
+  # ╭─ 에이전트 운영 콘솔 — 회사를 세우고 근무자를 조정한다 ────╮
+  # 관제 화면이 "지금 무슨 일이 벌어지는가"라면 여기는 "누가 어떻게 일하게
+  # 할 것인가"다. 둘을 한 화면에 넣지 않았다 — 사고 대응 중에 조직을 고치는
+  # 일은 없고, 조직을 설계할 때 경보를 볼 필요도 없다.
+  #
+  # agents/ 를 **읽기·쓰기로** 마운트한다. 이 서비스는 DB 를 갖지 않고 파일을
+  # 직접 고친다. 그래야 학생이 웹으로 바꾼 것과 셸에서 바꾼 것이 같은 것이 되고,
+  # git diff 로 자기가 무엇을 바꿨는지 볼 수 있다.
+  agentops:
+    container_name: kt66-agentops
+    build:
+      context: .
+      dockerfile: agentops/Dockerfile
+    hostname: agentops
+    # 호스트 사용자로 돈다. root 로 쓰면 학생이 셸에서 자기 파일을 못 고친다 —
+    # 웹과 셸이 같은 파일을 다룬다는 이 서비스의 전제가 거기서 깨진다.
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      AGENTS_DIR: /agents
+      API_KEY: ${API_KEY:?Set API_KEY in .env}
+      OBS_INDEXER_URL: https://wazuh.indexer:9200
+      OBS_CA: /certs/root-ca.pem
+      OBS_READER_CREDENTIALS: /siem-reader/account.json
+      OBS_COLLECTOR_STATUS: /siem-state/status.json
+      TZ: Asia/Seoul
+    volumes:
+      - ./ui:/app/ui:ro
+      - ./agents:/agents
+      - agent-observer-reader:/siem-reader:ro
+      - agent-observer-state:/siem-state:ro
+      - ./wazuh-config/certs/root-ca.pem:/certs/root-ca.pem:ro
+    ports:
+      - "${INT_HOST_IP:-0.0.0.0}:8050:8000"   # 내부 전용
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.61
+    restart: unless-stopped
+
+  # 관제 저장소 준비는 일회성이다. 관리자 인증서를 상주 수집기/웹에 주지 않는다.
+  agent-observer-setup:
+    container_name: kt66-agent-observer-setup
+    build: {context: ., dockerfile: observability/Dockerfile}
+    command: [python, setup.py]
+    environment:
+      OBS_UID: ${UID:-1000}
+      OBS_GID: ${GID:-1000}
+    volumes:
+      - ./wazuh-config/certs/root-ca.pem:/certs/root-ca.pem:ro
+      - ./wazuh-config/certs/admin.pem:/certs/admin.pem:ro
+      - ./wazuh-config/certs/admin-key.pem:/certs/admin-key.pem:ro
+      - agent-observer-writer:/writer
+      - agent-observer-reader:/reader
+      - agent-observer-state:/state
+    networks: [dmz]
+    depends_on: [wazuh-indexer]
+    restart: "no"
+
+  agent-observer:
+    container_name: kt66-agent-observer
+    build: {context: ., dockerfile: observability/Dockerfile}
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      AGENTS_DIR: /agents
+      OBS_WRITER_CREDENTIALS: /siem-writer/account.json
+    volumes:
+      - ./agents:/agents:ro
+      - ./wazuh-config/certs/root-ca.pem:/certs/root-ca.pem:ro
+      - agent-observer-writer:/siem-writer:ro
+      - agent-observer-state:/state
+    networks: [dmz]
+    depends_on:
+      agent-observer-setup: {condition: service_completed_successfully}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+  # ╭─ 관제 화면(NOC) — 4F 운영층의 창 ─────────────────────────╮
+  # 상태를 만들지 않고 모으기만 한다: envsim(전력·열·경보) + roster(근무자) +
+  # docker.sock(컨테이너 생사). 화면이 자기 값을 만들기 시작하면 학생이 보는 숫자와
+  # SIEM 에 남는 숫자가 갈라지고, 그 순간 교보재가 아니라 장식이 된다.
+  #
+  # 존은 dmz 다(관리 포털과 같다). 4F 운영층이라는 것은 물리 배치이자 권한 경계이지
+  # 별도 세그먼트가 아니다 — 그 어긋남을 화면이 그대로 드러낸다.
+  # ╭─ 모델 운영 실습 (3F AI 전산실) ──────────────────────────╮
+  # 학생이 **살아 있는 서비스의 모델을 고쳐서 유지한다.** 수요는 계속 들어오고,
+  # 일부는 지금 설정 때문에 실패한다. 실패는 두 얼굴로 온다 — 지표(간접)와
+  # 티켓(직접). 지표를 먼저 읽은 학생과 티켓을 기다린 학생의 차이가 점수다.
+  #
+  # 모델 정의는 DB 가 아니라 파일이다(./modelops/models). 웹으로 고친 것과 셸에서
+  # 고친 것이 같은 파일이어야 하고 git diff 로 보여야 한다 — 무엇을 바꿨는지 말할
+  # 수 없는 변경은 사고로 이어진다.
+  #
+  # OLLAMA_URL 이 비어 있으면 모의 백엔드로 떨어진다. 모의라도 manifest 의 효과는
+  # 그대로 재현한다(잘림·근거없음·거부·지연). GPU 없는 교실에서도 수업이 되어야 한다.
+  modelops:
+    container_name: kt66-modelops
+    build:
+      context: .
+      dockerfile: modelops/Dockerfile
+    hostname: modelops
+    networks:
+      app: { ipv4_address: 10.20.50.60 }
+    ports:
+      - "${INT_HOST_IP:-0.0.0.0}:8060:8000"
+    environment:
+      API_KEY: ${API_KEY:?Set API_KEY in .env}
+      MODELS_DIR: /models
+      DB_PATH: /data/modelops.db
+      OLLAMA_URL: ${LLM_BASE_URL:-}
+      DEMAND_SEC: ${MODELOPS_DEMAND_SEC:-6}
+      TZ: *tz
+    user: "${UID:-1000}:${GID:-1000}"     # 학생이 셸에서도 같은 파일을 고칠 수 있어야 한다
+    volumes:
+      - ./ui:/app/ui:ro
+      - ./modelops/models:/models
+      # 이름있는 볼륨 대신 바인드 마운트다. 볼륨은 root 소유로 만들어져
+      # 비-root 컨테이너가 못 쓴다 — 그리고 학생이 호스트에서 로그 DB 를
+      # 직접 열어 볼 수 있어야 한다(sqlite3 로 지표를 재계산해 보는 것도 실습이다).
+      - ./modelops/data:/data
+      - *tz_localtime
+    restart: unless-stopped
+
+  # ╭─ 인프라 요구사항 실습 ──────────────────────────────────╮
+  # 요구는 사업 언어로 온다. "3층에 한 대 더." 어디에 어떻게 놓을지는 안 적혀 있고,
+  # 그 결정이 존 경계·전력·자산 대장에 걸린다는 것도 안 적혀 있다.
+  #
+  # 판정은 **학생의 보고가 아니라 랩의 실제 상태**로 한다. 그래서 docker.sock(읽기),
+  # envsim(대장·전력), 저장소 파일 세 곳을 직접 본다. 저장소를 읽기 전용으로 붙이는
+  # 이유는 명확하다 — 이 서비스는 채점만 하고 아무것도 고치지 않는다.
+  infraops:
+    container_name: kt66-infraops
+    build:
+      context: .
+      dockerfile: infraops/Dockerfile
+    hostname: infraops
+    networks:
+      dmz: { ipv4_address: 10.20.32.62 }
+    ports:
+      - "${INT_HOST_IP:-0.0.0.0}:8070:8000"
+    environment:
+      ENVSIM_URL: http://10.20.32.60:8000   # envsim 의 dmz 주소. ot 주소(10.20.60.10)는 dmz 에서 못 간다
+      REPO_DIR: /repo
+      TZ: *tz
+    volumes:
+      - ./ui:/app/ui:ro
+      - ./infraops/requirements:/app/requirements:ro
+      - .:/repo:ro                                   # 저장소 반영 여부 확인용(읽기 전용)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - *tz_localtime
+    restart: unless-stopped
+
+  noc:
+    container_name: kt66-noc
+    build:
+      context: .
+      dockerfile: noc/Dockerfile
+    hostname: noc
+    depends_on: [envsim, injector]
+    environment:
+      ENVSIM_URL: http://10.20.32.60:8000   # envsim 의 dmz 다리
+      INJECTOR_URL: http://10.20.32.52:8000
+      # 화면에 그대로 찍히는 "주소"다 — 바인딩 값(0.0.0.0)이 새어 나오면 자산 대장 링크가
+      # http://0.0.0.0:8020 이 된다. 미설정이면 웹 진입 IP 를 쓴다.
+      INT_HOST: ${INT_HOST_IP:-${WEB_HOST_IP:-192.168.12.100}}
+      WEB_HOST: ${WEB_HOST_IP:-192.168.12.100}
+      LAB_DOMAIN: ${LAB_DOMAIN:-kt66.lab}
+      API_KEY: ${API_KEY:?Set API_KEY in .env}
+      TZ: Asia/Seoul
+    volumes:
+      - ./ui:/app/ui:ro
+      - ./agents:/agents:ro                 # 근무자 명단·루프 — 편집하면 5초 뒤 화면에 반영
+      # 화면 파일은 이미지에도 구워져 있지만(Dockerfile 의 COPY), 여기서 덮어쓴다.
+      # 재빌드 없이 브라우저 새로고침만으로 반영된다 — 수업 중에 화면을 손볼 수 있다.
+      # 이미지 안의 사본은 그대로 두었다: 이 저장소 없이 이미지만 돌려도 화면은 떠야 한다.
+      - ./noc/static:/app/static:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "${INT_HOST_IP:-0.0.0.0}:8020:8000"
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.51
+    restart: unless-stopped
+
+  # ╭─ 고장 주입기 — IT 계통 38종 ─────────────────────────────────╮
+  # 시설(OT) 10종은 envsim 이 물리 모델과 함께 갖고 있고, 여기는 나머지다 —
+  # 시스템·스토리지·네트워크·보안·부하. 둘을 합치지 않은 이유는 역할이 다르기
+  # 때문이다: envsim 은 물리 시뮬레이터이고 여기는 **랩을 실제로 조작하는** 서비스다.
+  # 물리 엔진에 docker.sock 쓰기 권한을 주면 시뮬레이션 버그가 인프라를 망가뜨린다.
+  #
+  # ⚠ docker.sock 을 **쓰기**로 마운트하는 유일한 상시 서비스다. 그래서 화이트리스트
+  #   카탈로그만 실행하고 임의 명령 입구는 두지 않았다. 모든 state 형 주입은 TTL 이
+  #   지나면 스스로 풀린다 — 앞 조의 고장이 다음 조에 남으면 안 된다.
+  injector:
+    container_name: kt66-injector
+    build: ./injector
+    hostname: injector
+    depends_on: [siem]
+    environment:
+      API_KEY: ${API_KEY:?Set API_KEY in .env}
+      SYSLOG_HOST: 10.20.32.100     # 강사의 주입도 사건이다 — 학생 타임라인에 같이 남는다
+      SYSLOG_PORT: "514"
+      TZ: Asia/Seoul
+    volumes:
+      # 활성 주입 기록. 컨테이너 밖에 둬야 재시작·재빌드 후에도 원복 계획이 남는다 —
+      # 메모리에만 두면 재시작하는 순간 무엇을 되돌려야 하는지 잊고, 주입된 것이
+      # 랩에 영영 남는다(실제로 kt66-portal 에 그렇게 살아남은 것들이 있었다).
+      - ./injector/state:/state
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "${INT_HOST_IP:-0.0.0.0}:8030:8000"
+    networks:
+      dmz:
+        ipv4_address: 10.20.32.52
+    restart: unless-stopped
+
+
+  # ╭─ int tier: vuln endpoints (behind WAF) ─────────────────╮
+  juiceshop:
+    container_name: kt66-juiceshop
+    image: bkimminich/juice-shop:latest
+    hostname: juiceshop
+    networks:
+      int: { ipv4_address: 10.20.40.81 }
+    environment: { TZ: *tz }
+    volumes: [*tz_localtime]
+    restart: unless-stopped
+
+  dvwa:
+    container_name: kt66-dvwa
+    image: vulnerables/web-dvwa:latest
+    hostname: dvwa
+    networks:
+      int: { ipv4_address: 10.20.40.82 }
+    environment: { TZ: *tz }
+    volumes: [*tz_localtime]
+    restart: unless-stopped
+
+  neobank:
+    container_name: kt66-neobank
+    build: { context: ./vuln-sites/neobank }
+    hostname: neobank
+    networks:
+      int: { ipv4_address: 10.20.40.83 }
+    environment: { PORT: 3001 }
+    restart: unless-stopped
+
+  govportal:
+    container_name: kt66-govportal
+    build: { context: ./vuln-sites/govportal }
+    hostname: govportal
+    networks:
+      int: { ipv4_address: 10.20.40.84 }
+    environment: { PORT: 3002 }
+    restart: unless-stopped
+
+  mediforum:
+    container_name: kt66-mediforum
+    build: { context: ./vuln-sites/mediforum }
+    hostname: mediforum
+    networks:
+      int: { ipv4_address: 10.20.40.85 }
+    environment: { PORT: 3003 }
+    restart: unless-stopped
+
+  adminconsole:
+    container_name: kt66-adminconsole
+    build: { context: ./vuln-sites/adminconsole }
+    hostname: adminconsole
+    networks:
+      int: { ipv4_address: 10.20.40.86 }
+    environment: { PORT: 3004 }
+    restart: unless-stopped
+
+  aicompanion:
+    container_name: kt66-aicompanion
+    build: { context: ./vuln-sites/aicompanion }
+    hostname: aicompanion
+    networks:
+      int: { ipv4_address: 10.20.40.87 }
+    environment:
+      PORT: 3005
+      LLM_BACKEND: ${AICOMPANION_LLM_BACKEND:-mock}
+      OLLAMA_URL: ${LLM_BASE_URL:-}
+      OLLAMA_MODEL: ${LLM_MODEL:-gemma3:4b}
+      LLM_CFG_PATH: /data/llm_cfg.json   # admin 설정 영속화 (재기동/재빌드 후 유지)
+    volumes:
+      - aicompanion-data:/data
+    restart: unless-stopped
+
+
+networks:
+  user:
+    name: kt66-user
+    internal: true
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.20.70.0/24
+          gateway: 10.20.70.254
+  ext:
+    name: kt66-ext
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.20.30.0/24
+          gateway: 10.20.30.254
+
+  pipe:
+    name: kt66-pipe
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.20.31.0/24
+          gateway: 10.20.31.254
+
+  dmz:
+    name: kt66-dmz
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.20.32.0/24
+          gateway: 10.20.32.254
+
+  int:
+    name: kt66-int
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.20.40.0/24
+          gateway: 10.20.40.254
+
+  # 3F GPU 존. 터널 너머의 DGX Spark(10.20.50.10)가 이 존의 구성원이 된다.
+  app:
+    name: kt66-app
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.20.50.0/24
+          gateway: 10.20.50.254
+
+  # B1·1F 시설망(OT). 실제 DC 에서 BMS/시설 계통은 IT 망과 분리한다 — 그 구조를 따른다.
+  ot:
+    name: kt66-ot
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.20.60.0/24
+          gateway: 10.20.60.254
+
+
+secrets:
+  kt66_roundcube_seed:
+    file: ./mail/roundcube-key
+
+volumes:
+  mail-data:
+  mail-queue:
+  mail-tls:
+  webmail-db:
+  windows-user-data:
+  agent-observer-writer:
+  agent-observer-reader:
+  agent-observer-state:
+  bastion-data:
+  ips-suricata-logs:
+  web-apache-logs:
+  wazuh-indexer-data:
+  wazuh-manager-etc:
+  wazuh-manager-logs:
+  wazuh-manager-queue:
+  wazuh-manager-var:
+  attacker-home:
+  bastion-ssh-host:
+  attacker-ssh-host:
+  aicompanion-data:

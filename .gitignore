@@ -1,0 +1,97 @@
+.env
+endpoints/windows/media/
+*.log
+.DS_Store
+__pycache__/
+*.pyc
+node_modules/
+.idea/
+.vscode/
+docker-compose.yaml.bak-*
+
+# 학생 환경마다 다른 SSH key 자동 생성 (kt66.sh up 의 ensure_ssh_keys). public/private
+# 둘 다 학생 환경 전용 — public 도 다른 학생 환경에 쓰면 안 됨. keys/.gitkeep 만 push.
+keys/id_rsa
+keys/id_rsa.pub
+
+
+
+
+# Wazuh TLS certs — 배포 시 생성/복사, 절대 push 금지 (사설키 포함)
+wazuh-config/certs/*.pem
+wazuh-config/certs/*.key
+
+# kt66 deploy-time 생성물 (절대 push 금지 — ssl/key.pem 사설키 포함)
+ssl/
+sigma/sigma_rules.xml
+# 컨테이너가 레포 경로에 만드는 런타임 데이터
+configs/
+files/
+logs/
+gnupg/
+
+# harness 실행별 산출물(런타임)
+bastion/src/harness/workspace/
+
+# harness 자동생성 아티팩트(런타임)
+bastion/src/harness/generated/
+
+# agentctl 렌더 산출물 — roster/personas 에서 언제든 재생성된다
+agents/runtimes/*/rendered/
+
+# WireGuard 터널 키·설정 — 사설키 포함. 배포마다 setup-tunnel.sh 로 새로 만든다
+gpu-gw/wg/*.key
+gpu-gw/wg/*.pub
+gpu-gw/wg/*.conf
+
+# 주입기 활성 상태 — 런타임에 생긴다
+injector/state/
+
+# 에이전트 운영 콘솔이 저장 전에 남기는 백업. 되돌리기용이지 이력이 아니다 — git 이 이력을 맡는다.
+agents/.bak/
+# 사건 티켓은 **증적**이다. 경험그래프의 handled edge 가 source 로 티켓 파일명을 적는데,
+# 티켓이 저장소에 없으면 그 provenance 를 아무도 검증할 수 없다 — 그래프의 규율 ① 이
+# 무너진다. 감사인의 루프 이름도 evidence-collection 이다. 그래서 티켓은 git 에 남긴다.
+# 러너의 내부 상태만 뺀다(진행 중 사건 추적용이지 기록이 아니다).
+agents/tickets/.state.json
+
+# Worker runner transient locks/health (execution audit remains evidence).
+agents/tickets/.runner.lock
+agents/tickets/.state.tmp
+agents/tickets/runner-status.json
+agents/tickets/runner-status.tmp
+
+
+# Local immutable harnesses, runtime queues and operational evidence
+agents/runtimes/
+agents/evidence/
+agents/tickets/.engine.lock
+agents/tickets/loop-engine.sqlite3*
+agents/tickets/loop-engine-status.json
+agents/tickets/approvals/
+agents/tickets/delegations/
+agents/tickets/worker-memory/
+agents/tickets/cycle-state/
+agents/tickets/xoc/
+agents/tickets/research-lab/
+
+# Local diagnostic runs (existing tracked teaching examples are retained)
+agents/tickets/20*.md
+agents/tickets/session-work-*.md
+agents/tickets/*.jsonl
+
+# 사용자 요청과 산출물은 배포 환경별 실행 자료입니다.
+agents/tickets/requests/
+agents/tickets/.request-change.lock
+agents/tickets/tool-permissions.json
+agents/tickets/tool-permissions.lock
+agents/native/.edit.lock
+web/landing/projects/
+web/request-rules/*.conf
+
+# 배포 도메인 설정과 메일 자격증명 (환경별 생성)
+deployment/runtime/
+ui/deployment.json
+mail/accounts.json
+mail/credentials.local.json
+mail/roundcube-key
