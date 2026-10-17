@@ -44,6 +44,10 @@ bin/work nw-sec-ops -p "방화벽 정책 점검해 줘"   # 한 번 묻고 끝�
 LAB_MODE=live bin/work soc-analyst          # kt66 컨테이너를 읽기 전용으로 조회
 ```
 
+**구독 로그인 전용.** 모든 실행은 학생이 `claude /login`으로 로그인한 Claude 구독 계정으로 한다.
+`bin/work`와 실험 실행기는 API 키 변수를 지우고 실행하며, 실행 기록의 인증 정보가 API 키이면 실험을 멈춘다.
+`bin/check`는 프로젝트 설정에 `apiKeyHelper`나 API 키 변수가 있으면 문제로 보고한다.
+
 `bin/work`는 `claude --agent <직무> --setting-sources project,local --mcp-config .mcp.json --strict-mcp-config`로
 에이전트를 실행한다. 처음 여는 폴더는 Claude Code가 '신뢰하지 않은 작업 공간'으로 보고 `settings.json`의 허용 목록을
 무시하므로, 실행기가 같은 목록을 `--allowedTools`로 넘긴다.

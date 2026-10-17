@@ -13,6 +13,7 @@
   S2 metadata.extends 의 스킬이 있다
   S3 스킬 본문이 언급한 랩 도구를 metadata.role 직무가 쓸 수 있다
   R1 roles.yaml 의 직무마다 에이전트 파일이 있다
+  B1 구독 로그인 전용: 프로젝트 설정·MCP 설정에 API 키(apiKeyHelper, ANTHROPIC_API_KEY 등)가 없다
 """
 import pathlib, re, sys
 import yaml
@@ -102,8 +103,17 @@ for r in roles["roles"]:
     if r not in agents:
         problems.append(f"R1 roles.yaml 의 '{r}' 에이전트 파일 없음")
 
+# B1 추가 과금되는 API 경로를 막는다: 근무자는 학생의 Claude 구독 로그인으로만 돈다
+for f in (ORG / ".claude/settings.json", ORG / ".claude/settings.local.json", ORG / ".mcp.json"):
+    if f.exists():
+        s = f.read_text(encoding="utf-8")
+        for bad in ("apiKeyHelper", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL"):
+            if bad in s:
+                problems.append(f"B1 {f.name}: {bad} 설정이 있습니다. 구독 로그인 전용이어야 합니다")
+
 for p in problems:
     print("✗", p)
+
 if "--quiet" not in sys.argv:
     print("\n참고:\n" + "\n".join(notes) if notes else "")
     print(f"에이전트 {len(agents)}, 스킬 {len(skills)} (NCS {sum(1 for s in skills if s.startswith('ncs-'))}, "

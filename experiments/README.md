@@ -20,7 +20,8 @@ python3 experiments/run.py --compare SOC-01                # 변형별 통과율
 - 실행마다 `org/`를 `experiments/results/<ID>/<변형>/<시각>-r<n>/org`로 복사한 뒤 변형을 적용한다. 원본 `org/`는 바뀌지 않는다.
 - 각 실행 폴더에 `transcript.jsonl`(전체 대화), `answer.md`(최종 보고), `score.json`(채점), `evidence/`(랩 도구·스킬·게이트·하네스 기록)가 남는다.
 - 모델 응답은 매번 다르다. **결론은 `--repeat`로 여러 번 돌린 비율로 낸다.** 한 번 통과·실패로 말하지 않는다.
-- 비용 감각: haiku 기준 1회 약 $0.005–0.01.
+- **구독 로그인 전용.** 실행기는 학생 PC에서 `claude /login`으로 로그인한 Claude 구독 계정으로 클로드 코드를 돌린다. API 키(`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`)는 넘기지 않고, 실행 기록의 인증 정보(`apiKeySource`)가 `none`이 아니면 즉시 멈춘다. `bin/check`는 프로젝트 설정에 `apiKeyHelper`나 API 키 변수가 있으면 문제로 보고한다. 실행 사용량은 구독 한도에서 차감된다.
+- 사용량 감각: haiku 기준 1회에 10~25턴, 출력 토큰 수천 개. `score.json`의 `meta`에 턴·출력 토큰·인증 정보가 남는다.
 
 ## 시나리오 종류
 

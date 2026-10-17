@@ -34,11 +34,13 @@ def load_transcript(run_dir):
             for c in (r.get("message") or {}).get("content", []) or []:
                 if isinstance(c, dict) and c.get("type") == "tool_result" and c.get("tool_use_id") in by_id:
                     by_id[c["tool_use_id"]]["error"] = bool(c.get("is_error"))
+        elif r.get("type") == "system" and r.get("subtype") == "init":
+            meta["api_key_source"] = r.get("apiKeySource")
+            meta["model"] = r.get("model")
         elif r.get("type") == "result":
             answer = r.get("result") or ""
-            meta = {"turns": r.get("num_turns"), "cost_usd": r.get("total_cost_usd"),
-                    "duration_ms": r.get("duration_ms"), "subtype": r.get("subtype"),
-                    "output_tokens": (r.get("usage") or {}).get("output_tokens")}
+            meta.update({"turns": r.get("num_turns"), "duration_ms": r.get("duration_ms"),
+                         "subtype": r.get("subtype"), "output_tokens": (r.get("usage") or {}).get("output_tokens")})
     return calls, answer, meta
 
 

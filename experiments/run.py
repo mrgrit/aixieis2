@@ -105,6 +105,9 @@ def run_once(path, scen, variant, rep, model, dry, live=False):
     apply_ops(org, v.get("ops"))
     env = {**os.environ, "LAB_FIXTURES": str(path), "LAB_EVIDENCE_DIR": str(out / "evidence"),
            **{k: str(x) for k, x in (v.get("env") or {}).items()}}
+    # 구독 로그인으로만 실행한다. 추가 과금되는 API 키는 넘기지 않는다(bin/work 도 같은 처리를 한다).
+    for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
+        env.pop(k, None)
     if live:
         # 실제 kt66 컨테이너를 읽는다. 시나리오 fixtures 는 쓰지 않는다(변경 상태 기록용 파일만 남긴다).
         env["LAB_MODE"] = "live"
@@ -129,6 +132,8 @@ def run_once(path, scen, variant, rep, model, dry, live=False):
         if v.get("expect"):
             expect = check.merge_expect(expect, v["expect"], v.get("expect_replace"))
         calls, answer, meta = check.load_transcript(sdir)
+        if meta.get("api_key_source") not in (None, "none"):
+            raise SystemExit(f"중단: API 키({meta['api_key_source']})로 실행됐습니다. 구독 로그인(claude /login)으로만 실행합니다.")
         sc = check.score(expect, calls, answer, check.lab_status(sdir))
         sc["meta"] = meta
         sc["gate_denials"] = sum(1 for g in check.gate_log(sdir) if g.get("decision") == "deny")
@@ -136,7 +141,7 @@ def run_once(path, scen, variant, rep, model, dry, live=False):
         (sdir / "score.json").write_text(json.dumps(sc, ensure_ascii=False, indent=1), encoding="utf-8")
         results.append(sc)
         print(f"{scen['id']}/{v['id']}/r{rep} {s['role']}: {sc['passed']}/{sc['total']}  "
-              f"스킬={sc['skills']}  게이트거절={sc['gate_denials']}  턴={meta.get('turns')}")
+              f"스킬={sc['skills']}  게이트거절={sc['gate_denials']}  턴={meta.get('turns')}  인증={meta.get('api_key_source')}")
     return results
 
 
