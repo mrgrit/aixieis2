@@ -4,7 +4,6 @@ role: sys-sec-build
 type: verify
 chapter: 6
 ncs: 시스템 보안 구축 학습 2-1
-exam: 2025 과정평가 시스템보안구축 문항4
 prompt: '새로 구축한 리눅스 서버 db-main 에 조직 표준을 적용해 주세요: root 원격 접속 제한, 비밀번호 최소 사용 기간 1일, 최대 90일, 최소 길이 8.'
 fixtures:
   asset_inventory:

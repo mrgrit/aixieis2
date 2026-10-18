@@ -4,7 +4,6 @@ role: nw-sec-ops
 type: verify
 chapter: 9
 ncs: 네트워크 보안 운영 학습 2-1
-exam: 2025 내부평가 네트워크보안운영 문항2
 live_inject:
 - sec_nftdrift
 prompt: 클라우드 연동이 늘면서 방화벽·IDS 정책이 현실과 안 맞는다는 보고가 있습니다. 현재 정책과 설정을 점검해서 문제점(왜 문제인지)과 개선안, 개선안별 검증 방법을 정리해 주세요.

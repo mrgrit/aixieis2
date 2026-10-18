@@ -3,7 +3,6 @@ name: ncs-sysbuild-21-implement
 description: 설계에 따라 유닉스·리눅스 서버와 DBMS에 보안 설정을 구현할 때 사용한다. root 원격 접속 제한, 불필요 계정 제거, 관리자 그룹 최소화, 패스워드 파일 보호·잠금 임계값·길이·사용 기간, 세션 타임아웃, 불필요 서비스(NFS) 중지, Apache 상위 디렉터리 접근 금지, 주요 파일 권한, 로깅, DBMS 계정·원격 접속·권한을 다룬다.
 metadata:
   ncs: "LM2001020613_19v5 시스템 보안 구축 / 학습 2-1 시스템 보안 구현 (pp.47-68)"
-  exam: "2025 과정평가 시스템보안구축 문항4"
   role: "sys-sec-build"
 ---
 
@@ -53,4 +52,3 @@ metadata:
 ## 근거
 
 - NCS 시스템 보안 구축 학습 2-1 (pp.49-64)
-- 2025 과정평가 시스템보안구축 문항4 (root 원격 접속 제한, PASS_MIN_DAYS 1 / PASS_MAX_DAYS 90 / PASS_MIN_LEN 8)

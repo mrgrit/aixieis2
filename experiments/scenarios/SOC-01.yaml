@@ -4,7 +4,6 @@ role: soc-analyst
 type: verify
 chapter: 12
 ncs: 보안로그 분석 — 정탐·오탐 판정
-exam: 보안로그분석 문4
 live_inject:
 - sec_sqli
 prompt: 오늘 09:12쯤 neobank 로그인 페이지에 WAF SQL 인젝션 경보가 떴습니다. 정탐인지 오탐인지 판정하고 보고해 주세요.

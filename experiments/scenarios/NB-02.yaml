@@ -4,7 +4,6 @@ role: nw-sec-build
 type: verify
 chapter: 7
 ncs: NW보안 구축 학습 2-1
-exam: 2025 내부평가 네트워크보안구축 문항4
 prompt: 방화벽과 IDS를 적용하고 로그를 SIEM으로 연계했습니다. 정책 적용 후 연동(로그 연계, 탐지→경보 흐름)을 검증하는 단계별 체크리스트를 써 주세요. 로그 포맷, 전송 빈도, 탐지 테스트
   방법을 포함해 주세요.
 fixtures:

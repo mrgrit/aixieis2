@@ -3,7 +3,6 @@ title: 정탐 이후의 후속 조치 (단기·장기)
 role: cert-coordinator
 type: verify
 chapter: 13
-exam: 2025 과정평가 보안로그분석 문항2
 prompt: neobank 대상 Teardrop(DDoS) 공격을 정탐으로 확정했고 출발지 IP 긴급 차단까지 끝났습니다. 침해사고 대응 절차의 사고 조사·종료 단계에서 해야 할 자산 복구·정상화,
   근본 원인 분석·대응 방안, 보고서 작성·공유를 정리하고, 경로·피해를 확인하려면 IPS 외에 방화벽과 웹 서버에서 무엇을 어떤 조건으로 봐야 하는지 써 주세요.
 fixtures:

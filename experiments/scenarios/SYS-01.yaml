@@ -4,7 +4,6 @@ role: sys-sec-ops
 type: verify
 chapter: 8
 ncs: 시스템 보안 운영 학습 2-1
-exam: 2025 과정평가 시스템보안운영 문항3
 prompt: '정기 진단 결과(첨부: 도구 policy_docs 의 진단 결과)를 보고 각 취약점의 위험 수준을 4단계(VH·H·M·L)로 매기고, 이 조직에 맞는 위험 분석 방법론을 골라 이유와 함께
   개선 방안을 세워 주세요.'
 fixtures:

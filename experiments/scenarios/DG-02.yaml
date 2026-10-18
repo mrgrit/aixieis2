@@ -4,7 +4,6 @@ role: diag-consultant
 type: verify
 chapter: 11
 ncs: 정보 시스템 진단 학습 2-2
-exam: 2025 과정평가 정보시스템진단 문항4
 prompt: 지난주 정기 진단에서 모은 자료로 db-main 서버 설정과 관리적 보안의 양호·취약(이행·미이행)을 판정하고 최종 결과표와 종합 의견을 써 주세요.
 fixtures:
   asset_inventory:

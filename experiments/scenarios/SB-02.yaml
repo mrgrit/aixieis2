@@ -4,7 +4,6 @@ role: sys-sec-build
 type: verify
 chapter: 6
 ncs: 시스템 보안 구축 학습 1-1
-exam: 2025 과정평가 시스템보안구축 문항1
 prompt: 전 임직원이 쓰는 차세대 통합 업무 시스템을 구축합니다. 사용자 인증의 보안요구사항을 계정 관리 5가지, 비밀번호 정책 5가지로 정의해 주세요.
 fixtures:
   asset_inventory:

@@ -4,7 +4,6 @@ role: diag-consultant
 type: verify
 chapter: 11
 ncs: 정보 시스템 진단 학습 1-1
-exam: 2025 과정평가 정보시스템진단 문항1
 prompt: 다음 달 모바일 뱅킹 'M-Bank' 오픈 전에 정보시스템 진단 준비를 합니다. 웹 서버 WEB-01(CentOS, DMZ, 대고객), DB 서버 DB-Main(Unix, 내부망, 금융
   거래 데이터), 방화벽 FW-Ext(S-8890)의 자산 관리 대장을 만들고, Unix 서버와 네트워크 장비의 핵심 점검 항목을 체크리스트로 써 주세요. 경영 전략은 '비대면 채널 경쟁력 강화'입니다.
 fixtures:

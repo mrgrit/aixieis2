@@ -43,7 +43,6 @@ role: soc-analyst            # bin/work 로 띄울 에이전트 (.claude/agents/
 type: verify
 chapter: 12                  # 2권 원고의 장
 ncs: 보안 로그 분석 학습 1-2
-exam: 보안로그분석 시험 문항 …
 live_inject: [sec_sqli]      # --live 일 때 kt66 주입기에 걸 장애
 prompt: 오늘 09:12쯤 …
 fixtures:                    # mock 모드에서 랩 도구가 돌려줄 자료 (도구 이름 = 키)

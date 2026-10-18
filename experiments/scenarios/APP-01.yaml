@@ -4,7 +4,6 @@ role: app-sec-ops
 type: verify
 chapter: 10
 ncs: 애플리케이션 보안 운영 학습 3-1
-exam: 2025 내부평가 애플리케이션보안운영 문항2
 live_inject:
 - sec_sqli
 prompt: 내부 웹서버 /login.php 에 다중 요청과 WAF 경보 'SQL Injection – UNION SELECT detected'가 발생했고, 같은 시간 DB 에러가 다수, 일부 사용자는

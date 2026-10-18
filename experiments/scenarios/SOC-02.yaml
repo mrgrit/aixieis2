@@ -4,7 +4,6 @@ role: soc-analyst
 type: verify
 chapter: 12
 ncs: 보안로그 분석 학습 1-2 <표 1-17>
-exam: 2025 과정평가 보안로그분석 문항1
 live_inject:
 - load_conn_exhaust
 prompt: 14시쯤 IPS에서 neobank(10.20.40.11) 대상 TCP Syn Flooding Critical 경보가 연속으로 떴습니다. 정탐인지 오탐인지 판정하고, 공격 기법·공격 원리·피해

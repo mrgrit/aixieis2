@@ -4,7 +4,6 @@ role: nw-sec-build
 type: verify
 chapter: 7
 ncs: NW보안 구축 학습 1-2
-exam: 2025 내부평가 네트워크보안구축 문항2
 prompt: '외부·DMZ·내부망(사내망·운영서버망·개발서버망) 구조입니다. 요구사항: ① 외부↔DMZ는 HTTP/HTTPS만 ② DMZ 웹 → 내부 DB는 지정 IP·포트만 ③ 개발·운영 서버 SSH는
   내부망 관리자 PC 특정 IP에서만 ④ 모든 장비 로그는 SIEM으로 ⑤ 불필요한 외부 역방향 트래픽 차단. 번호 순으로 적용되는 정책표를 설계해 주세요.'
 fixtures:

@@ -3,7 +3,6 @@ name: ncs-diag-22-execute
 description: 면담과 기술적 진단(서버·네트워크·애플리케이션·DBMS)을 실제로 수행하고, 항목마다 양호·취약을 판정하고, 관리적·기술적 진단 결과를 분석·요약할 때 사용한다.
 metadata:
   ncs: "LM2001060207_16v1 정보 시스템 진단 / 학습 2-2 취약점 진단 수행 (pp.48-63)"
-  exam: "2025 과정평가 정보시스템진단 문항3 과제2, 문항4"
   role: "diag-consultant"
 ---
 
@@ -40,4 +39,3 @@ metadata:
 ## 근거
 
 - NCS 정보 시스템 진단 학습 2-2 (pp.51-58), <표 2-11>~<표 2-14>
-- 2025 과정평가 정보시스템진단 문항3 과제2(finger 설정), 문항4(PermitRootLogin yes, Max Failures 0, 정책 미공표)

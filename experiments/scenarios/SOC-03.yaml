@@ -4,7 +4,6 @@ role: soc-analyst
 type: verify
 chapter: 12
 ncs: 보안로그 분석 학습 1-2
-exam: 2025 과정평가 보안로그분석 문항3
 prompt: IDS 룰 1004(TCP Syn Flooding Protection)가 웹서버 10.20.32.80 대상으로 경보를 두 건 냈습니다. 두 이벤트 각각 정탐·오탐을 판정하고, 정탐 건의
   공격자 IP·공격 기법·공격 원리를 정리해 주세요.
 fixtures:

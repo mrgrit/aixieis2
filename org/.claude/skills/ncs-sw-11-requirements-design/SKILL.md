@@ -3,7 +3,6 @@ name: ncs-sw-11-requirements-design
 description: 응용프로그램 개발 전에 법·지침과 SW 개발보안 가이드의 설계 기준으로 SW 보안요구사항을 식별·명세하고, 중요 정보를 식별하고, 보안 적용 계획서와 점검표를 작성할 때 사용한다.
 metadata:
   ncs: "LM2001020611_19v5 SW개발 보안 구축 / 학습 1-1 SW개발 보안요구사항 명세와 설계 (pp.3-20)"
-  exam: "2025 과정평가 시험지 없음"
   role: "sw-sec-dev"
 ---
 
