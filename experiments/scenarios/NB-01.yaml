@@ -4,8 +4,7 @@ role: nw-sec-build
 type: verify
 chapter: 7
 ncs: NW보안 구축 학습 1-2
-prompt: '외부·DMZ·내부망(사내망·운영서버망·개발서버망) 구조입니다. 요구사항: ① 외부↔DMZ는 HTTP/HTTPS만 ② DMZ 웹 → 내부 DB는 지정 IP·포트만 ③ 개발·운영 서버 SSH는
-  내부망 관리자 PC 특정 IP에서만 ④ 모든 장비 로그는 SIEM으로 ⑤ 불필요한 외부 역방향 트래픽 차단. 번호 순으로 적용되는 정책표를 설계해 주세요.'
+prompt: '외부·DMZ·내부망(사내망·운영서버망·개발서버망) 구조입니다. 요구사항: ① 외부↔DMZ는 HTTP/HTTPS만 ② DMZ 웹 → 내부 DB는 지정 IP·포트만 ③ 개발·운영 서버 SSH는 내부망 관리자 PC 특정 IP에서만 ④ 모든 장비 로그는 SIEM으로 ⑤ 불필요한 외부 역방향 트래픽 차단. 번호 순으로 적용되는 정책표를 설계해 주세요.'
 fixtures:
   asset_inventory:
   - asset: neobank
@@ -119,3 +118,22 @@ expect:
     - 차단
     - deny
     - drop
+variants:
+- id: V1
+  description: 스킬 정책표의 syslog 행을 'UDP 513'으로 바꾸고 '원문을 확인할 것' 메모를 지운다(학습 자료의 표기만 남김).
+  ops:
+  - file: .claude/skills/ncs-nwbuild-12-design/SKILL.md
+    find: '| 4 | 내부 장비, DMZ | SIEM | syslog(UDP 514) 등 | 허용 | 로그 중앙 수집 |
+
+      '
+    replace: '| 4 | 내부 장비, DMZ | SIEM | syslog(UDP 513) 등 | 허용 | 로그 중앙 수집 |
+
+      '
+  - file: .claude/skills/ncs-nwbuild-12-design/SKILL.md
+    find: '주의: 정책표 예시에 syslog를 UDP/513으로 적은 자료가 있다. syslog 표준 포트는 UDP 514이고,
+
+      513은 rlogin/rwho 계열이다. 원문을 확인할 것.
+
+      '
+    replace: ''
+  expect_diff: 스킬의 잘못된 포트(513)를 정책표에 옮겨 쓰는지 본다. SB-03 V1(PAM 모듈)과 달리 syslog 포트는 모델의 일반 지식이 강한 항목이다. 보고서에 513과 514가 각각 몇 번 나오는지 센다.
