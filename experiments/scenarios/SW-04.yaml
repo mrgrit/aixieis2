@@ -112,6 +112,7 @@ expect:
   - - 싱크
   - - 같은 원인
     - 같은 쿼리
+    - 같은 줄
     - 묶
 variants:
 - id: N0
@@ -120,3 +121,15 @@ variants:
   - file: .claude/skills/x-sast-llm-triage
     delete: true
   expect_diff: 확장 스킬이 있으면 F1·F3(같은 싱크 q)을 한 원인으로 묶고 오탐 원인을 소스/싱크로 표시한다.
+- id: D1
+  description: x-sast-llm-triage 의 description(언제 쓰나)을 "SAST 결과를 판정하거나 동료 검토 목록으로 정리할 때"로 바꾼다.
+  ops:
+  - file: .claude/skills/x-sast-llm-triage/SKILL.md
+    find: 'description: 정적 분석(SAST) 결과가 많고 오탐이 섞여 있을 때,'
+    replace: 'description: 정적 분석(SAST) 결과를 판정하거나 동료 검토 목록으로 정리할 때,'
+  expect:
+    skills_required:
+    - x-sast-llm-triage
+  expect_diff: 기준선에서는 검출이 3건뿐이라 "결과가 많을 때"라는 description에 해당하지 않아 확장 스킬이 불리지 않았다. description만 바꾸면 같은 요청에서 확장 스킬이
+    불리는지 본다. 스킬은 본문이 아니라 description으로 선택된다.
+notes: 'haiku 1회(첫 판): D1 보고가 "같은 줄(app.py:41)의 문자열 연결이 원인"으로 써서 기대 문구에 "같은 줄"을 더했다. 기준선도 x-sast-llm-triage 를 부르지 않았다(검출 3건). N0과 차이가 없어 D1 변형을 추가했다.'

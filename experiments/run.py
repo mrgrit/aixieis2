@@ -103,7 +103,22 @@ def run_once(path, scen, variant, rep, model, dry, live=False):
     for d in ("evidence", "tickets", "candidates"):
         (org / d).mkdir(exist_ok=True)
     apply_ops(org, v.get("ops"))
-    env = {**os.environ, "LAB_FIXTURES": str(path), "LAB_EVIDENCE_DIR": str(out / "evidence"),
+    fx_path = path
+    if v.get("fixtures"):
+        # 변형이 자료(fixtures)를 바꾸는 경우: 도구·앱 단위로 덮어쓴 시나리오를 실행 폴더에 남기고 그것을 읽힌다.
+        merged = json.loads(json.dumps(scen.get("fixtures") or {}))
+        for tool, val in v["fixtures"].items():
+            if isinstance(val, dict) and isinstance(merged.get(tool), dict):
+                for k, x in val.items():
+                    if isinstance(x, dict) and isinstance(merged[tool].get(k), dict):
+                        merged[tool][k].update(x)
+                    else:
+                        merged[tool][k] = x
+            else:
+                merged[tool] = val
+        fx_path = out / "fixtures.yaml"
+        fx_path.write_text(yaml.safe_dump({"fixtures": merged}, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    env = {**os.environ, "LAB_FIXTURES": str(fx_path), "LAB_EVIDENCE_DIR": str(out / "evidence"),
            **{k: str(x) for k, x in (v.get("env") or {}).items()}}
     # 구독 로그인으로만 실행한다. 추가 과금되는 API 키는 넘기지 않는다(bin/work 도 같은 처리를 한다).
     for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):

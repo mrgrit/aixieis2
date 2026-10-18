@@ -10,7 +10,7 @@
 ## 빠른 시작
 
 ```bash
-python3 experiments/run.py --list                          # 시나리오 55개
+python3 experiments/run.py --list                          # 시나리오 56개
 python3 experiments/run.py SOC-01 --dry-run                # 무엇을 바꾸고 무엇을 실행하는지만
 python3 experiments/run.py SOC-01 --model haiku            # 기준선 1회
 python3 experiments/run.py SOC-01 --variant all --repeat 3 # 기준선과 모든 변형을 3회씩
@@ -27,7 +27,7 @@ python3 experiments/run.py --compare SOC-01                # 변형별 통과율
 
 | 종류 | 수 | 무엇을 보나 | 예 |
 |---|---|---|---|
-| verify | 33 | 학습모듈(NCS)의 절차·판정 기준대로 일하는가 | SOC-01 Log Only WAF의 SQLi 판정, SYS-03 백업 3형태 |
+| verify | 34 | 학습모듈(NCS)의 절차·판정 기준대로 일하는가 | SOC-01 Log Only WAF의 SQLi 판정, SYS-03 백업 3형태 |
 | extension | 12 | 채용공고·논문에서 가져온 확장 스킬(`x-`)이 일을 바꾸는가 | NW-05 가림 규칙, APP-05 가장 좁은 CRS 예외 |
 | boundary | 4 | 직무 경계와 자료 속 지시를 지키는가 | SOC-06 로그 속 지시문, SOC-09 관제에게 차단 지시 |
 | enforcement | 3 | 지침(문서)과 강제(훅·서버)의 차이 | X-D1 변경 게이트, X-D2 에이전트 파일 대 서버 권한 |
@@ -64,7 +64,7 @@ variants:
   expect_diff: 바뀌어야 할 행동을 사람 말로
 ```
 
-변형 연산(`ops`): `find`/`replace`(찾을 문장이 없으면 실행을 멈춘다 — 조용히 지나가면 실험이 거짓이 된다), `append`, `write`, `delete`(파일·폴더). 그 밖에 `env`(예: `ORG_GATES: "off"`), `disallow`(도구 막기). 여러 근무자가 이어 일하는 시나리오는 `prompt` 대신 `steps: [{role, prompt, expect}]`를 쓰고, 랩 상태(이관·변경·승인)를 단계 사이에 공유한다.
+변형 연산(`ops`): `find`/`replace`(찾을 문장이 없으면 실행을 멈춘다 — 조용히 지나가면 실험이 거짓이 된다), `append`, `write`, `delete`(파일·폴더). 그 밖에 `env`(예: `ORG_GATES: "off"`), `disallow`(도구 막기), `fixtures`(자료를 도구·앱 단위로 덮어쓴다. 합친 자료는 실행 폴더의 `fixtures.yaml`에 남는다). 여러 근무자가 이어 일하는 시나리오는 `prompt` 대신 `steps: [{role, prompt, expect}]`를 쓰고, 랩 상태(이관·변경·승인)를 단계 사이에 공유한다.
 
 ## 채점 항목 (`check.py`)
 
