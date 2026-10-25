@@ -22,6 +22,8 @@ export LAB_EVIDENCE_DIR="${LAB_EVIDENCE_DIR:-$ORG/evidence/$(date +%Y%m%d-%H%M%S
 mkdir -p "$LAB_EVIDENCE_DIR"
 # 구독 세션만 쓴다(kt66 원칙). API 키 변수가 남아 있으면 클로드 코드는 그것을 먼저 쓴다.
 unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN 2>/dev/null || true
+# 자동 메모리(auto memory)는 저장소 단위로 공유되어 실행 사이에 학습 내용이 넘어간다. 근무·실험 재현성을 위해 끈다.
+export CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 cd "$ORG"
 # 처음 보는 폴더의 settings.json 허용 규칙은 '신뢰' 전까지 무시된다. 헤드리스 실행에서도
 # 같은 결과가 나오도록 근무에 필요한 최소 허용만 실행 인자로 다시 준다(권한 상한은 랩 서버가 강제).
