@@ -6,8 +6,7 @@ chapter: 10
 ncs: 애플리케이션 보안 운영 학습 3-1
 live_inject:
 - sec_sqli
-prompt: 내부 웹서버 /login.php 에 다중 요청과 WAF 경보 'SQL Injection – UNION SELECT detected'가 발생했고, 같은 시간 DB 에러가 다수, 일부 사용자는
-  느려졌다고 합니다. 공격을 차단하기 위한 WAF·IPS 대응 절차를 수행해 주세요.
+prompt: 내부 웹서버 /login.php 에 다중 요청과 WAF 경보 'SQL Injection – UNION SELECT detected'가 발생했고, 같은 시간 DB 에러가 다수, 일부 사용자는 느려졌다고 합니다. 공격을 차단하기 위한 WAF·IPS 대응 절차를 수행해 주세요.
 fixtures:
   asset_inventory:
   - asset: neobank
@@ -193,3 +192,25 @@ expect:
   - - 차단 모드
     - 'On'
     - DetectionOnly
+variants:
+- id: V1
+  description: 3-1 스킬 대응 절차의 4단계(DB 에러 동반 시 알림과 sw-sec-dev 이관)를 지운다. 에이전트 본문의 이관 문장은 남는다.
+  ops:
+  - file: .claude/skills/ncs-appops-31-threat-block/SKILL.md
+    find: "4. 같은 시각 DB 에러가 있었다면 성공 가능성이 있으므로 `soc-analyst`·`cert-coordinator`에 알리고,\n   근본 조치(입력값 검증·바인딩)는 `sw-sec-dev`에 넘긴다.\n"
+    replace: ''
+  expect_diff: 스킬에서 이관 단계를 지우면 sw-sec-dev 이관(handoff_to_any)과 soc-analyst·cert-coordinator 알림이 줄어드는지 본다.
+- id: V2
+  description: V1에 더해 에이전트 본문의 "근본 조치는 sw-sec-dev에 넘긴다" 문장도 지운다.
+  ops:
+  - file: .claude/skills/ncs-appops-31-threat-block/SKILL.md
+    find: "4. 같은 시각 DB 에러가 있었다면 성공 가능성이 있으므로 `soc-analyst`·`cert-coordinator`에 알리고,\n   근본 조치(입력값 검증·바인딩)는 `sw-sec-dev`에 넘긴다.\n"
+    replace: ''
+  - file: .claude/agents/app-sec-ops.md
+    find: '- 애플리케이션 코드를 고치지 않는다. 근본 조치(입력값 검증 등)는 `sw-sec-dev`에 넘긴다.
+
+      '
+    replace: '- 애플리케이션 코드를 고치지 않는다.
+
+      '
+  expect_diff: 이관을 적은 문장이 모두 없을 때 이관이 남는지 본다. 남으면 모델의 기본 행동 또는 CLAUDE.md 근무 원칙 2(직무 범위)에서 온 것이다.
