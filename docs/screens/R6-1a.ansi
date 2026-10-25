@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh SB-01 && python3 experiments/run.py --compare SB-01
+$ python3 experiments/run.py SB-01 --model haiku --repeat 3
+SB-01/base/r1 sys-sec-build: 9/9  스킬=['ncs-sysbuild-21-implement']  게이트거절=1  턴=17  인증=none
+SB-01/base/r2 sys-sec-build: 9/9  스킬=['ncs-sysbuild-21-implement']  게이트거절=0  턴=16  인증=none
+SB-01/base/r3 sys-sec-build: 8/9  스킬=['ncs-sysbuild-21-implement']  게이트거절=4  턴=22  인증=none
+  (실행 2026-10-25 12:30:27 ~ 12:32:09)
+# SB-01 root 원격 접속과 비밀번호 정책 구현
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| base | 3 | 0.96 | ncs-sysbuild-21-implement(3) |
+
+| 검사 | base |
+|---|---|
+| 도구 호출: change_prepare | 3/3 |
+| 도구 호출: host_config | 3/3 |
+| 변경 요청서 spec 에 'PASS_MAX_DAYS' | 3/3 |
+| 변경 요청서 spec 에 'PermitRootLogin no' | 2/3 |
+| 변경 종류: ['host'] | 3/3 |
+| 보고에 포함: 결론 | 3/3 |
+| 보고에 포함: 근거 | 3/3 |
+| 보고에 포함: 한계 | 3/3 |
+| 스킬 사용: ncs-sysbuild-21-implement | 3/3 |
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

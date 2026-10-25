@@ -1,0 +1,50 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh NB-02 && python3 experiments/run.py --compare NB-02 && python3 docs/screens/excerpt.py NB-02 base 1 20
+$ python3 experiments/run.py NB-02 --model haiku --repeat 3
+NB-02/base/r1 nw-sec-build: 8/8  스킬=['ncs-nwbuild-21-implement']  게이트거절=0  턴=5  인증=none
+NB-02/base/r2 nw-sec-build: 8/8  스킬=['ncs-nwbuild-21-implement']  게이트거절=0  턴=6  인증=none
+NB-02/base/r3 nw-sec-build: 8/8  스킬=['ncs-nwbuild-21-implement']  게이트거절=0  턴=5  인증=none
+  (실행 2026-10-25 12:28:03 ~ 12:29:48)
+# NB-02 방화벽 → IDS → SIEM 연동 검증 절차서
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| base | 3 | 1.00 | ncs-nwbuild-21-implement(3) |
+
+| 검사 | base |
+|---|---|
+| 보고에 포함: 결론 | 3/3 |
+| 보고에 포함: 근거 | 3/3 |
+| 보고에 포함: 필드 | 3/3 |
+| 보고에 포함: 한계 | 3/3 |
+| 보고에 하나 이상: ['syslog'] | 3/3 |
+| 보고에 하나 이상: ['상관'] | 3/3 |
+| 보고에 하나 이상: ['승인'] | 3/3 |
+| 스킬 사용: ncs-nwbuild-21-implement | 3/3 |
+[실행] experiments/results/NB-02/base/20261025-122803-r1/
+[도구 순서] fw_rules(no_data) → network_topology
+[answer.md]
+  ## 결론
+
+  방화벽 → IDS → SIEM 연동 검증은 **4단계 13개 시험 항목**으로 나눴습니다. 이번 세션에서는 방화벽 정책을 읽지 못해(`fw_rules` 응답
+    없음) 정책 반영 여부는 **확인 불가** 상태입니다. 실제 시험은 아직 수행하지 않았고, 아래는 실행용 체크리스트입니다.
+
+  ## 0. 시험 전 준비 (공통)
+
+  | 항목 | 내용 |
+  |---|---|
+  | 승인 | 적용 요청서(`change_prepare`, kind=fw-design)의 승인 ID 확인. 승인 없이 정책을 바꾸지 않는다. |
+  | 시각 동기 | 방화벽, IDS, SIEM, 수집기의 시각이 같은 NTP 원천을 쓰는지 확인하고 타임존을 기록한다. 시각이 어긋나면 3단계 상관분석
+    이 실패한다. |
+  | 시험 출발지 | 승인된 테스트 단말 1대만 쓴다. 출발 IP와 시험 시간창을 기록한다. |
+  | 시험 범위 | ext → pipe → dmz(WAF) → int 경로의 **시험용 대상**만 사용한다. **ot(10.20.60.0/24)는 시험 대상에서 제외**한다. 시설
+    망이고 허용 범위가 tcp/8000·ICMP뿐이다. |
+  | 원복 | 시험 중 정책을 바꾸지 않는다. 시험 실패 시 조치는 change로 따로 올린다. |
+
+  ## 1. 방화벽 (1단계)
+
+  | ID | 점검 | 방법 | 기대 결과 | 증적 |
+  |---|---|---|---|---|
+  | F-1 | 정책 반영 | 장비 정책을 export해 설계표(정책표)의 규칙 ID·순서·동작과 대조 | 설계표와 일치, 순서 오류 없음 | export 파일,
+    대조표 |
+  | F-2 | 허용 시험 | 테스트 단말 → WAF 공개 포트(예: 443)에 연결 | 연결 성공, 허용 로그 1건 생성 | 시험 시각, 로그 원문 |
+student@lab:~/aixieis2$

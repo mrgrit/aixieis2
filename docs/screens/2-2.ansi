@@ -1,0 +1,10 @@
+student@lab:~/aixieis2$ docs/screens/init-compare.sh
+$ cd ~/aixieis2 && claude -p ok --model haiku --max-turns 1 --output-format stream-json --verbose | jq …
+[1m{[34m"폴더"[39m:[0m[32m[49m"aixieis2"[1m[39m,[34m"근무자"[39m:[0m[39m[49m0[1m,[34m"NCS스킬"[39m:[0m[39m[49m0[1m,[34m"확장스킬"[39m:[0m[39m[49m0[1m,[34m"랩서버"[39m:[0m[39m[49mfalse[1m,[34m"인증"[39m:[0m[32m[49m"none"[1m[39m}[0m[39m[49m
+
+$ cd ~/aixieis2/org && MODEL=haiku bin/work sw-sec-dev -p ok --max-turns 1 --output-format stream-json --verbose | jq …
+[1m{[34m"폴더"[39m:[0m[32m[49m"org"[1m[39m,[34m"근무자"[39m:[0m[39m[49m13[1m,[34m"NCS스킬"[39m:[0m[39m[49m50[1m,[34m"확장스킬"[39m:[0m[39m[49m11[1m,[34m"랩서버"[39m:[0m[39m[49mtrue[1m,[34m"인증"[39m:[0m[32m[49m"none"[1m[39m}[0m[39m[49m
+student@lab:~/aixieis2$
+
+
+

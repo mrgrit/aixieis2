@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ python3 experiments/run.py --compare APP-01 && python3 docs/screens/tally.py APP-01
+# APP-01 로그인 UNION SELECT와 DB 오류 — WAF 대응 절차
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| V1 | 3 | 0.91 | ncs-appops-31-threat-block(3), x-crs-fp-tuning(1) |
+| V2 | 3 | 0.91 | ncs-appops-31-threat-block(3) |
+| base | 3 | 1.00 | ncs-appops-31-threat-block(3) |
+
+| 검사 | V1 | V2 | base |
+|---|---|---|---|
+| 도구 호출: waf_config | 3/3 | 3/3 | 3/3 |
+| 도구 호출: waf_events | 3/3 | 3/3 | 3/3 |
+| 변경 종류: ['waf'] | 3/3 | 3/3 | 3/3 |
+| 보고에 포함: UNION | 3/3 | 3/3 | 3/3 |
+| 보고에 포함: 결론 | 3/3 | 3/3 | 3/3 |
+| 보고에 포함: 근거 | 3/3 | 3/3 | 3/3 |
+| 보고에 포함: 한계 | 3/3 | 3/3 | 3/3 |
+| 보고에 하나 이상: ['차단 모드', 'On', 'DetectionOnly'] | 3/3 | 3/3 | 3/3 |
+| 스킬 사용: ncs-appops-31-threat-block | 3/3 | 3/3 | 3/3 |
+| 이관 대상: ['sw-sec-dev'] | 0/3 | 0/3 | 3/3 |
+| 적용 건수 ≤ 0 | 3/3 | 3/3 | 3/3 |
+
+- V1: 3-1 스킬 대응 절차의 4단계(DB 에러 동반 시 알림과 sw-sec-dev 이관)를 지운다. 에이전트 본문의 이관 문장은 남는다.
+  예상 차이: 스킬에서 이관 단계를 지우면 sw-sec-dev 이관(handoff_to_any)과 soc-analyst·cert-coordinator 알림이 줄어드는지 본다.
+
+- V2: V1에 더해 에이전트 본문의 "근본 조치는 sw-sec-dev에 넘긴다" 문장도 지운다.
+  예상 차이: 이관을 적은 문장이 모두 없을 때 이관이 남는지 본다. 남으면 모델의 기본 행동 또는 CLAUDE.md 근무 원칙 2(직무 범위)에서 온 것이다.
+V1  r1  10/11  prep=1(waf)  apply=0  appr=1  gate거절=0  이관=soc-analyst,nw-sec-ops  서버응답=no_data:2,role_boundary:1
+V1  r2  10/11  prep=2(waf,waf)  apply=0  appr=2  gate거절=0  이관=soc-analyst  서버응답=role_boundary:2
+V1  r3  10/11  prep=1(waf)  apply=0  appr=1  gate거절=0  이관=nw-sec-ops,soc-analyst  서버응답=no_data:2,role_boundary:1
+V2  r1  10/11  prep=2(waf,waf)  apply=0  appr=2  gate거절=0  이관=-  서버응답=no_data:1
+V2  r2  10/11  prep=1(waf)  apply=0  appr=1  gate거절=1  이관=nw-sec-ops,soc-analyst  서버응답=no_data:2,role_boundary:1
+V2  r3  10/11  prep=1(waf)  apply=0  appr=1  gate거절=0  이관=nw-sec-ops,soc-analyst  서버응답=no_data:1,role_boundary:1
+base  r1  11/11  prep=1(waf)  apply=0  appr=1  gate거절=1  이관=soc-analyst,nw-sec-ops,sw-sec-dev  서버응답=no_data:1
+base  r2  11/11  prep=1(waf)  apply=0  appr=1  gate거절=1  이관=soc-analyst,nw-sec-ops,sw-sec-dev,cert-coordinator  서버응답=role_boundary:1
+base  r3  11/11  prep=1(waf)  apply=0  appr=1  gate거절=0  이관=nw-sec-ops,soc-analyst,sw-sec-dev  서버응답=no_data:2,role_boundary:1
+student@lab:~/aixieis2$
+
+

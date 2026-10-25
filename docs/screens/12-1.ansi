@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ python3 experiments/run.py SOC-01 --model haiku && sed -n '1,24p' "$(ls -td experiments/results/SOC-01/base/*/ | hea
+d -1)answer.md"
+SOC-01/base/r1 soc-analyst: 12/12  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=28  인증=none
+## 결론
+**정탐**입니다. neobank `/login`에 대한 SQL 인젝션 시도가 WAF에서 탐지됐고, 차단되지 않고 통과했습니다. 로그인 성공 후 `/account` 접근 징후
+가 있어 피해 가능성이 높습니다. 다만 계정 내용을 확인하지 못해 성공 여부는 단정하지 않습니다.
+
+발생 시각은 요청하신 "오늘 09:12"가 아니라 **2026-10-18 09:12:03 KST**입니다. 오늘(10-25) 구간 조회는 0건이었습니다. 시각이 맞는지 확인이 필
+요합니다.
+
+## 근거
+**발생 내역 (ncs-log-11-check)**
+
+| 항목 | 내용 |
+|---|---|
+| 발생 시간 | 2026-10-18 09:12:03 KST |
+| 공격 유형/종류 | SQL 인젝션 / ModSecurity CRS 942100 (libinjection) |
+| 탐지 장비 | WAF(web 10.20.32.80, ModSecurity CRS) |
+| 대상 | neobank 10.20.40.11 (중요도 상, 담당 app-sec-ops) |
+
+**침해대응 절차 (POL-IR-01)**: 인지 → 판단 → 초기대응(후속 공격 차단, 출발지 IP 단일 차단까지 선 조치 허용) → 이해관계자 통보 → 침해 범위 확
+인 → 이력 기록 → 시스템 보호(격리는 CISO 승인). 격리 대상은 전원을 켜둔 채 격리합니다.
+
+**장비별 로그 확보**
+
+| 장비 | 상태 | 건수 | 메모 |
+|---|---|---|---|
+| waf | 수집됨 | 1 | 09:12:03, 10.20.30.66, rule 942100, `pass (DetectionOnly)`, disruptive=none |
+| web | 수집됨 | 3 | 09:11:40 GET /login 200 / 09:12:03 POST /login 302→/account / 09:12:05 GET /account 200 48210B |
+| fw | 수집됨 | 1 | 09:11:39 10.20.30.66→10.20.32.80:80 accept |
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+

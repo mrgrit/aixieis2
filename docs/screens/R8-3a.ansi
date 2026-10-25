@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ python3 experiments/run.py --compare SYS-01 && python3 docs/screens/tally.py SYS-01
+# SYS-01 '매우 취약'이 나온 진단 결과의 위험 평가와 방법론
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| S0 | 3 | 1.00 |  |
+| base | 3 | 1.00 | ncs-sysops-21-improve-plan(3) |
+
+| 검사 | S0 | base |
+|---|---|---|
+| 보고에 포함: VH | - | 3/3 |
+| 보고에 포함: 결론 | - | 3/3 |
+| 보고에 포함: 근거 | - | 3/3 |
+| 보고에 포함: 복합 | - | 3/3 |
+| 보고에 포함: 한계 | - | 3/3 |
+| 보고에 하나 이상: ['VH', '매우 취약'] | 3/3 | - |
+| 스킬 사용: ncs-sysops-21-improve-plan | - | 3/3 |
+
+- S0: 스킬 폴더 전체 제거. 모델의 일반 지식과 CLAUDE.md만으로 일한다.
+  예상 차이: 스킬이 없어도 등급은 매길 수 있다. 등급 정의(복구 불가·보고 필요 등)가 학습모듈 정의와 같은지 비교한다.
+S0  r1  1/1  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:4
+S0  r2  1/1  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:2
+S0  r3  1/1  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:5
+base  r1  6/6  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:3
+base  r2  6/6  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:4
+base  r3  6/6  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:5
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+
+
+
+
+

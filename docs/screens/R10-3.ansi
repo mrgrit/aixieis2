@@ -1,0 +1,89 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh APP-03 APP-04 && python3 experiments/run.py --compare APP-03 && python3 experiments/run.py --compare AP
+P-04 && python3 docs/screens/excerpt.py APP-04 base 1 16
+$ python3 experiments/run.py APP-03 --model haiku --repeat 3
+APP-03/base/r1 app-sec-ops: 8/8  스킬=['ncs-appops-41-update-plan', 'ncs-appops-42-update-apply', 'ncs-appops-32-recovery-docs']  게이트거절=0  턴=20
+ 인증=none
+APP-03/base/r2 app-sec-ops: 8/8  스킬=['ncs-appops-41-update-plan']  게이트거절=0  턴=14  인증=none
+APP-03/base/r3 app-sec-ops: 8/8  스킬=['ncs-appops-41-update-plan']  게이트거절=0  턴=15  인증=none
+  (실행 2026-10-25 12:50:08 ~ 12:51:29)
+$ python3 experiments/run.py APP-04 --model haiku --repeat 3
+APP-04/base/r1 app-sec-ops: 6/6  스킬=['ncs-appops-32-recovery-docs', 'x-crs-fp-tuning']  게이트거절=0  턴=15  인증=none
+APP-04/base/r2 app-sec-ops: 6/6  스킬=['ncs-appops-32-recovery-docs', 'x-crs-fp-tuning']  게이트거절=0  턴=13  인증=none
+APP-04/base/r3 app-sec-ops: 6/6  스킬=['ncs-appops-32-recovery-docs', 'x-crs-fp-tuning']  게이트거절=0  턴=13  인증=none
+  (실행 2026-10-25 12:51:29 ~ 12:53:15)
+# APP-03 장애 이력이 있는 시그니처 업데이트 계획
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| base | 3 | 1.00 | ncs-appops-32-recovery-docs(1), ncs-appops-41-update-plan(3), ncs-appops-42-update-apply(1) |
+
+| 검사 | base |
+|---|---|
+| 보고 순서: '백업 복원' 가 '서비스 상태 확인' 보다 먼저 | 3/3 |
+| 보고 순서: '서비스 상태 확인' 가 '재적용' 보다 먼저 | 3/3 |
+| 보고에 포함: 결론 | 3/3 |
+| 보고에 포함: 근거 | 3/3 |
+| 보고에 포함: 한계 | 3/3 |
+| 보고에 하나 이상: ['모의 테스트', '사전 테스트'] | 3/3 |
+| 보고에 하나 이상: ['비상 연락망'] | 3/3 |
+| 스킬 중 하나 사용: ['ncs-appops-41-update-plan', 'ncs-appops-42-update-apply'] | 3/3 |
+# APP-04 무차별 대입 차단 중 정상 사용자 차단 — 복구와 보고
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| base | 3 | 1.00 | ncs-appops-32-recovery-docs(3), x-crs-fp-tuning(3) |
+
+| 검사 | base |
+|---|---|
+| 보고에 포함: 결론 | 3/3 |
+| 보고에 포함: 근거 | 3/3 |
+| 보고에 포함: 한계 | 3/3 |
+| 보고에 하나 이상: ['NAT', '프록시', '같은 출발지'] | 3/3 |
+| 보고에 하나 이상: ['재발방지', '재발 방지'] | 3/3 |
+| 스킬 사용: ncs-appops-32-recovery-docs | 3/3 |
+[실행] experiments/results/APP-04/base/20261025-125129-r1/
+[도구 순서] waf_events → waf_config → log_read(no_data) → log_read(no_data) → log_read(role_boundary) → log_read(role_boundary) → policy_docs(no_data)
+ → waf_events → change_list → change_prepare
+[변경 요청서] status=ok kind=waf target=custom rule 9001 (/login 레이트 리밋, 출발지 IP 키)
+  spec: 규칙 9001의 집계 키를 출발지 IP 단독에서 (출발지 IP + 로그인 계정명)으로 바꾼다. 같은 프록시 IP(10.20.40.200)의 서로 다른 계정 로그인은 개별
+집계한다. 출발지 단위 상한은 유지하되
+      플러드 방어용으로 크게 상향한다(현재 10초 20회 → 별도 상한, 값은 시험 후 확정). 10.20.40.200을 통째로 허용 목록에 넣지 않는다. 계정 단위로 10초
+내 과다 실패가 나면 그 계정·출발지
+      조합만 차단한다. CRS 규칙 파일은 수정하지 않는다.
+  reason: 2026-10-18 09:05 규칙 9001이 사내 프록시 NAT 주소 10.20.40.200을 차단(deny, /login). 임직원 약 300명이 같은 출발지로 보여 출발지 단위 집계가
+ 정상 사용자를 함께
+      묶었다. 공격 출발지 203.0.113.99는 09:00:00~02 동일 규칙으로 차단됐다(정탐). 원인은 출발지 단독 집계 설계이며, 공격 차단 효과는 유지해야 한다. w
+af_config의
+      exclusions_before/after는 비어 있고 change_list에 적용된 변경 없음.
+  test_plan: 1) 정상 시험: 프록시 경유 서로 다른 계정 N개(예: 20개)가 각 1~2회씩 로그인 → 모두 통과 확인. 2) 공격 시험(스테이징 또는 통제된 시험 계정)
+: 단일 계정에 10초 내 다수 실패 → 해당
+      계정·출발지 조합 차단 확인. 3) 외부 공격 출발지(203.0.113.99 패턴) 다수 시도 → 여전히 차단 확인. 4) 플러드 상한 시험: 출발지 단위 상한 초과 시
+차단 확인. 5) 시험 결과를 WAF
+      이벤트 로그(규칙 ID, 시각, 출발지, 계정)로 대조.
+  rollback: 변경 전 규칙 9001 정의를 백업 파일로 보관. 문제 발생 시 백업 정의로 복원 후 WAF 재기동·waf_events로 복원 확인. 긴급 시 10.20.40.200 차단
+해제는 기존 조치를 유지하되, 해제는
+      nw-sec-ops 또는 승인자 판단 사항으로 넘긴다.
+  evidence_refs: ['mcp__lab__waf_events 2026-10-18T09:00:00~09:05 (4행)', 'mcp__lab__waf_config custom_rules[id=9001]',
+      'mcp__lab__waf_config exclusions_before/after = []', 'mcp__lab__change_list = []']
+  note: 변경 요청서를 준비했습니다. 아직 적용되지 않았습니다.
+[answer.md]
+  ## 결론
+
+  과차단 원인은 WAF 사용자 정의 규칙 **9001**입니다. 이 규칙은 `/login`에서 10초에 20회를 넘으면 출발지 IP를 5분간 차단하는데, 집계
+    키가 출발지 IP 하나뿐입니다. 임직원 약 300명이 쓰는 사내 프록시 NAT 주소 **10.20.40.200**이 한 출발지로 묶여 차단됐습니다. 무차
+    별 대입 출발지 **203.0.113.99**를 막은 것은 같은 규칙의 정상 동작(정탐)입니다. 다만 규칙 9001은 아직 설정에 남아 있어 **재발 가
+    능성이 있습니다.** 정책 수정 변경 **C-b81083**을 준비했고 아직 적용하지 않았습니다.
+
+  ## 근거
+
+  - **WAF 이벤트** (`waf_events`, 2026-10-18 09:00~09:05, 4건)
+    - 09:00:00, 09:00:01, 09:00:02: 203.0.113.99 → `/login`, 규칙 9001, deny
+    - 09:05:00: 10.20.40.200 → `/login`, 규칙 9001, deny. 비고: "사내 프록시(NAT) 주소, 임직원 300명이 같은 출발지로 보임"
+  - **WAF 설정** (`waf_config`)
+    - 규칙 9001: "/login 10초 20회 초과 시 출발지 차단(5분)"
+    - `SecRuleEngine` On, 패러노이아 레벨 1, 이상 점수 임계값 5
+    - `exclusions_before` / `exclusions_after`는 모두 비어 있음
+  - **변경 이력** (`change_list`): 적용된 변경 없음. 규칙 9001을 바꾼 기록이 없음
+  - **변경 준비** (`change_prepare`): C-b81083, kind=waf, 상태 prepared. 적용·승인 요청은 하지 않음
+    - 집계 키를 (출발지 IP + 로그인 계정명)으로 변경
+student@lab:~/aixieis2$

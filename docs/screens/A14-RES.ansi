@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh RES-01 && ls -l experiments/results/RES-01/base/*/org/candidates/
+$ python3 experiments/run.py RES-01 --model haiku --repeat 1
+RES-01/base/r1 researcher: 5/5  스킬=['research-to-skill', 'read:ncs-appops-31-threat-block', 'read:x-crs-fp-tuning']  게이트거절=0  턴=43  인증=none
+  (실행 2026-10-25 12:52:23 ~ 12:56:02)
+total 4
+drwxrwxr-x 2 ccc ccc 4096 Oct 25 12:55 x-api-bot-abuse-protection
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

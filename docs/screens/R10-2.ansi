@@ -1,0 +1,55 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh APP-02 && python3 experiments/run.py --compare APP-02 && python3 docs/screens/excerpt.py APP-02 base 1
+24
+$ python3 experiments/run.py APP-02 --model haiku --repeat 3
+APP-02/base/r1 app-sec-ops: 8/8  스킬=['ncs-appops-12-operation']  게이트거절=0  턴=9  인증=none
+APP-02/base/r2 app-sec-ops: 8/8  스킬=['ncs-appops-12-operation']  게이트거절=0  턴=14  인증=none
+APP-02/base/r3 app-sec-ops: 8/8  스킬=['ncs-appops-12-operation']  게이트거절=0  턴=9  인증=none
+  (실행 2026-10-25 12:48:19 ~ 12:50:08)
+# APP-02 WAF 운영 점검 — 탐지 전용 모드와 디렉터리 인덱싱
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| base | 3 | 1.00 | ncs-appops-12-operation(3) |
+
+| 검사 | base |
+|---|---|
+| 보고에 포함: DetectionOnly | 3/3 |
+| 보고에 포함: 결론 | 3/3 |
+| 보고에 포함: 근거 | 3/3 |
+| 보고에 포함: 디렉터리 인덱싱 | 3/3 |
+| 보고에 포함: 한계 | 3/3 |
+| 보고에 하나 이상: ['405', '허용되지 않'] | 3/3 |
+| 보고에 하나 이상: ['백업 파일'] | 3/3 |
+| 스킬 사용: ncs-appops-12-operation | 3/3 |
+[실행] experiments/results/APP-02/base/20261025-124819-r1/
+[도구 순서] waf_config → waf_events(no_data) → log_read → log_read(no_data) → asset_inventory → network_topology(no_data)
+[answer.md]
+  ## 결론
+
+  정기 점검 결과 **이상 4건**이 나왔다. 가장 심각한 것은 **neobank 업무 DB 백업 파일(`neobank_20260901.sql.gz`, 약 50MB)이 웹에서 내
+    려받아졌다**는 점이다. WAF는 `DetectionOnly` 모드라 공격을 막지 않고 탐지만 하며, 탐지 이벤트 기록도 확인되지 않았다. 디렉터리
+    인덱싱과 관리자 로그인 페이지 노출도 취약으로 판정된다. PUT 메소드는 405로 차단되어 양호했다.
+
+  ## 근거
+
+  사용 스킬: `ncs-appops-12-operation` (운영 점검 체크리스트, 판단 기준 <표 1-8>)
+
+  **1. WAF 운영 상태 (`mcp__lab__waf_config`)**
+  - `SecRuleEngine: DetectionOnly` → **탐지만 하고 차단하지 않음**. "운영 중"이지만 막지 않는 상태다.
+  - `paranoia_level: 1`, `inbound_anomaly_score_threshold: 5`, 예외 규칙 없음(`exclusions_before/after` 비어 있음).
+  - `mcp__lab__waf_events` 결과는 `no_data`. 탐지 기록이 없는 것인지, 로그가 남지 않는 것인지 **확인 불가**다.
+
+  **2. 웹 서버 점검 (`mcp__lab__log_read source=web`, 4행, 시나리오 전체 기간)**
+
+  | 점검 항목 | 행 | 시각(KST) | 관측 | 판정 |
+  |---|---|---|---|---|
+  | 디렉터리 인덱싱 | 1 | 2026-10-18 02:10:00 | `/backup/` 200, body "Index of /backup" | **취약** |
+  | 백업 파일 노출 | 2 | 2026-10-18 02:10:05 | `/backup/neobank_20260901.sql.gz` 200, 52,428,800 bytes | **취약 (상)** |
+  | 관리자 페이지 노출 | 3 | 2026-10-18 02:11:00 | `/admin/` 302 → `/admin/login` | **취약** (로그인 페이지 도달 가능) |
+  | 위험한 메소드 | 4 | 2026-10-18 02:12:00 | `PUT /upload/test.txt` 405 | **양호** (PUT 차단 확인) |
+
+  - 위 4행 모두 요청 IP가 `10.20.32.50`이다. `mcp__lab__asset_inventory` 기준 이 주소는 **scanner-01(허가된 취약점 점검 서버, 담당 d
+    iag-consultant, 점검 창 "매주 화 02:00-04:00")**이다.
+  - 2026-10-18은 일요일이다. 활동 시각 02:10~02:12는 **허가된 점검 창(화요일 02:00-04:00) 밖**이다. 점검이었는지, 일정 불일치인지,
+    무단 접근인지는 **확인 불가**다.
+student@lab:~/aixieis2$

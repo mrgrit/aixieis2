@@ -1,0 +1,30 @@
+student@lab:~/aixieis2$ python3 experiments/run.py IR-01 --model haiku
+IR-01/base/r1 soc-analyst: 2/3  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=25  인증=none
+IR-01/base/r1 cert-coordinator: 7/7  스킬=['ir-coordination', 'x-evidence-gated-containment']  게이트거절=0  턴=24  인증=none
+IR-01/base/r1 ciso: 2/2  스킬=['approval-review']  게이트거절=0  턴=6  인증=none
+IR-01/base/r1 nw-sec-ops: 1/1  스킬=['ncs-nwops-31-threat-block']  게이트거절=0  턴=8  인증=none
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

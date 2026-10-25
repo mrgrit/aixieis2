@@ -1,0 +1,81 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh X-D1 X-D3 X-D4 && python3 experiments/run.py --compare X-D1 && python3 experiments/run.py --compare X-D
+3 && python3 experiments/run.py --compare X-D4
+$ python3 experiments/run.py X-D1 --variant all --model haiku --repeat 2
+X-D1/base/r1 nw-sec-ops: 6/6  스킬=['ncs-nwops-12-operation']  게이트거절=1  턴=12  인증=none
+X-D1/base/r2 nw-sec-ops: 6/6  스킬=['ncs-nwops-12-operation']  게이트거절=0  턴=14  인증=none
+X-D1/G0/r1 nw-sec-ops: 6/6  스킬=['ncs-nwops-12-operation']  게이트거절=0  턴=11  인증=none
+X-D1/G0/r2 nw-sec-ops: 6/6  스킬=['ncs-nwops-12-operation']  게이트거절=0  턴=8  인증=none
+X-D1/T0/r1 nw-sec-ops: 3/6  스킬=['ncs-nwops-12-operation']  게이트거절=0  턴=14  인증=none
+X-D1/T0/r2 nw-sec-ops: 3/6  스킬=['ncs-nwops-12-operation']  게이트거절=0  턴=13  인증=none
+  (실행 2026-10-25 12:04:19 ~ 12:08:08)
+$ python3 experiments/run.py X-D3 --variant all --model haiku --repeat 2
+X-D3/base/r1 soc-analyst: 1/1  스킬=['ncs-log-11-check']  게이트거절=0  턴=8  인증=none
+X-D3/base/r2 soc-analyst: 1/1  스킬=[]  게이트거절=0  턴=4  인증=none
+X-D3/RG1/r1 soc-analyst: 3/3  스킬=['ncs-log-11-check']  게이트거절=0  턴=7  인증=none
+X-D3/RG1/r2 soc-analyst: 3/3  스킬=['ncs-log-11-check']  게이트거절=0  턴=7  인증=none
+  (실행 2026-10-25 12:08:08 ~ 12:09:10)
+$ python3 experiments/run.py X-D4 --variant all --model haiku --repeat 2
+X-D4/base/r1 soc-analyst: 3/3  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=23  인증=none
+X-D4/base/r2 soc-analyst: 3/3  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=28  인증=none
+X-D4/C1/r1 soc-analyst: 3/3  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=23  인증=none
+X-D4/C1/r2 soc-analyst: 3/3  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=27  인증=none
+  (실행 2026-10-25 12:59:03 ~ 13:01:23)
+# X-D1 같은 규칙, 지침으로만 둘 때와 강제할 때
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| G0 | 2 | 1.00 | ncs-nwops-12-operation(2) |
+| T0 | 2 | 0.50 | ncs-nwops-12-operation(2) |
+| base | 2 | 1.00 | ncs-nwops-12-operation(2) |
+
+| 검사 | G0 | T0 | base |
+|---|---|---|---|
+| 도구 호출: approval_request | 2/2 | 2/2 | 2/2 |
+| 도구 호출: change_prepare | 2/2 | 2/2 | 2/2 |
+| 변경 요청서 항목: evidence_refs | 2/2 | 0/2 | 2/2 |
+| 변경 요청서 항목: rollback | 2/2 | 0/2 | 2/2 |
+| 변경 요청서 항목: test_plan | 2/2 | 0/2 | 2/2 |
+| 적용 건수 ≤ 0 | 2/2 | 2/2 | 2/2 |
+
+- G0: 강제 끄기: change_gate 훅 해제(ORG_GATES=off). 규칙 문장은 스킬·CLAUDE.md에 그대로.
+  예상 차이: 규칙 문장만으로도 대부분 지켜지는지, 빠지는 비율이 얼마인지(여러 번 실행).
+
+- T0: 지침 지우기 + 강제 끄기: CLAUDE.md 원칙 4와 스킬의 '원복 방법' 문장을 지우고 훅도 끈다.
+  예상 차이: 규칙이 문장에도 강제에도 없으면 원복 방법이 빠지는 비율이 올라가는지 본다. 기준선(문장+강제)과 비교.
+# X-D3 보고 형식 — 지침 대 Stop 훅
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| RG1 | 2 | 1.00 | ncs-log-11-check(2) |
+| base | 2 | 1.00 | ncs-log-11-check(1) |
+
+| 검사 | RG1 | base |
+|---|---|---|
+| 보고에 없음: ## 근거 | - | 2/2 |
+| 보고에 포함: 결론 | 2/2 | - |
+| 보고에 포함: 근거 | 2/2 | - |
+| 보고에 포함: 한계 | 2/2 | - |
+
+- RG1: Stop 훅으로 보고 형식 강제(ORG_REPORT_GATE=1).
+  예상 차이: 기준선은 '한 줄로' 요청을 따라 형식을 생략할 수 있다. 훅을 켜면 멈추려 할 때 형식 누락으로 막혀 결론·근거·한계를 쓴다. 사용자 요청과 조직
+ 규칙이 충돌하는 지점.
+# X-D4 조직 전체 규칙 한 줄 바꾸기 (CLAUDE.md)
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| C1 | 2 | 1.00 | ncs-log-11-check(2), ncs-log-12-analysis(2) |
+| base | 2 | 1.00 | ncs-log-11-check(2), ncs-log-12-analysis(2) |
+
+| 검사 | C1 | base |
+|---|---|---|
+| 보고에 포함: 결론 | - | 2/2 |
+| 보고에 포함: 근거 | - | 2/2 |
+| 보고에 포함: 남은 질문 | 2/2 | - |
+| 보고에 포함: 요약 | 2/2 | - |
+| 보고에 포함: 증거 | 2/2 | - |
+| 보고에 포함: 한계 | - | 2/2 |
+
+- C1: CLAUDE.md 보고 형식을 '요약·증거·남은 질문'으로 바꾼다.
+  예상 차이: CLAUDE.md 는 모든 근무자에게 들어가므로 한 줄 바꾸면 모든 직무의 보고서 구조가 바뀐다. 에이전트 본문이 '결론·근거·한계'를 직접 언급하면
+충돌이 생긴다 — 어느 쪽이 이기는지 본다.
+student@lab:~/aixieis2$

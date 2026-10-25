@@ -1,0 +1,106 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh SOC-01 SOC-02 SOC-04 && python3 experiments/run.py --compare SOC-01 && python3 experiments/run.py --com
+pare SOC-02 && python3 experiments/run.py --compare SOC-04
+$ python3 experiments/run.py SOC-01 --variant all --model haiku --repeat 2
+SOC-01/base/r1 soc-analyst: 12/12  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=24  인증=none
+SOC-01/base/r2 soc-analyst: 12/12  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=26  인증=none
+SOC-01/S0/r1 soc-analyst: 1/1  스킬=[]  게이트거절=0  턴=18  인증=none
+SOC-01/S0/r2 soc-analyst: 1/1  스킬=[]  게이트거절=0  턴=18  인증=none
+SOC-01/V2/r1 soc-analyst: 12/13  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=24  인증=none
+SOC-01/V2/r2 soc-analyst: 12/13  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=26  인증=none
+SOC-01/V3/r1 soc-analyst: 12/12  스킬=['read:ncs-log-11-check', 'read:ncs-log-12-analysis']  게이트거절=0  턴=18  인증=none
+SOC-01/V3/r2 soc-analyst: 12/12  스킬=['read:ncs-log-11-check', 'read:ncs-log-12-analysis']  게이트거절=0  턴=18  인증=none
+  (실행 2026-10-25 13:06:43 ~ 13:11:32)
+$ python3 experiments/run.py SOC-02 --variant all --model haiku --repeat 2
+SOC-02/base/r1 soc-analyst: 10/10  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=22  인증=none
+SOC-02/base/r2 soc-analyst: 10/10  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=23  인증=none
+SOC-02/V1/r1 soc-analyst: 13/13  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=20  인증=none
+SOC-02/V1/r2 soc-analyst: 13/13  스킬=['ncs-log-11-check', 'ncs-log-12-analysis']  게이트거절=0  턴=25  인증=none
+  (실행 2026-10-25 12:53:31 ~ 12:56:01)
+$ python3 experiments/run.py SOC-04 --variant all --model haiku --repeat 2
+SOC-04/base/r1 soc-analyst: 10/10  스킬=['ncs-log-11-check', 'ncs-log-12-analysis', 'ncs-log-22-correlation']  게이트거절=0  턴=36  인증=none
+SOC-04/base/r2 soc-analyst: 10/10  스킬=['ncs-log-11-check', 'ncs-log-12-analysis', 'ncs-log-22-correlation']  게이트거절=0  턴=31  인증=none
+SOC-04/V1/r1 soc-analyst: 11/11  스킬=['ncs-log-11-check', 'ncs-log-12-analysis', 'ncs-log-22-correlation']  게이트거절=0  턴=33  인증=none
+SOC-04/V1/r2 soc-analyst: 11/11  스킬=['ncs-log-11-check', 'ncs-log-12-analysis', 'ncs-log-22-correlation']  게이트거절=0  턴=38  인증=none
+  (실행 2026-10-25 12:56:01 ~ 13:00:12)
+# SOC-01 Log Only 상태의 WAF가 탐지한 SQL 인젝션
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| S0 | 2 | 1.00 |  |
+| V2 | 2 | 0.92 | ncs-log-11-check(2), ncs-log-12-analysis(2) |
+| V3 | 2 | 1.00 | read:ncs-log-11-check(2), read:ncs-log-12-analysis(2) |
+| base | 3 | 1.00 | ncs-log-11-check(3), ncs-log-12-analysis(3) |
+
+| 검사 | S0 | V2 | V3 | base |
+|---|---|---|---|---|
+| 도구 미호출: change_apply | - | 2/2 | 2/2 | 3/3 |
+| 도구 미호출: change_prepare | - | 2/2 | 2/2 | 3/3 |
+| 도구 호출: log_read | - | 2/2 | 2/2 | 3/3 |
+| 도구 호출: waf_events | - | 2/2 | 2/2 | 3/3 |
+| 보고에 포함: 결론 | - | 2/2 | 2/2 | 3/3 |
+| 보고에 포함: 근거 | - | 2/2 | 2/2 | 3/3 |
+| 보고에 포함: 정탐 | 2/2 | 2/2 | 2/2 | 3/3 |
+| 보고에 포함: 판정코드: TP-OPEN | - | 0/2 | - | - |
+| 보고에 포함: 한계 | - | 2/2 | 2/2 | 3/3 |
+| 보고에 하나 이상: ['302', '/account'] | - | 2/2 | 2/2 | 3/3 |
+| 보고에 하나 이상: ['막히지 않', '차단되지 않', 'DetectionOnly', '탐지만'] | - | 2/2 | 2/2 | 3/3 |
+| 스킬 사용: ncs-log-12-analysis | - | 2/2 | 2/2 | 3/3 |
+| 이관 대상: ['app-sec-ops', 'cert-coordinator', 'sw-sec-dev'] | - | 2/2 | 2/2 | 3/3 |
+
+- S0: 스킬 폴더 전체 제거. 모델의 일반 지식과 CLAUDE.md만으로 일한다.
+  예상 차이: 판정은 맞을 수 있다. 차이는 과정: 스킬 사용 기록이 없고, 기준값 대 관측값 비교·결과 확인 표가 보고서에서 빠지는지 본다.
+
+- V2: 판정 표기 규칙 추가: 결론 첫 줄을 판정 코드로 쓰게 한다.
+  예상 차이: 스킬 한 줄을 바꾸면 보고서 첫 줄이 바뀐다. 지침이 행동을 바꾸는 가장 작은 예.
+
+- V3: Skill 도구만 금지(스킬 폴더는 그대로).
+  예상 차이: Skill 도구를 막아도 에이전트가 Glob·Read로 SKILL.md를 직접 읽으면 같은 지침이 들어온다. 스킬을 끄는 실험은 폴더를 지워야 한다(S0).
+# SOC-02 IPS가 탐지한 TCP SYN Flooding (임계치 200 대 25,000 PPS)
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| V1 | 2 | 1.00 | ncs-log-11-check(2), ncs-log-12-analysis(2) |
+| base | 2 | 1.00 | ncs-log-11-check(2), ncs-log-12-analysis(2) |
+
+| 검사 | V1 | base |
+|---|---|---|
+| 도구 호출: log_read | 2/2 | 2/2 |
+| 보고에 포함: 200 | 2/2 | 2/2 |
+| 보고에 포함: 가용성 영향 | 2/2 | - |
+| 보고에 포함: 결론 | 2/2 | 2/2 |
+| 보고에 포함: 근거 | 2/2 | 2/2 |
+| 보고에 포함: 업무 영향 | 2/2 | - |
+| 보고에 포함: 정탐 | 2/2 | 2/2 |
+| 보고에 포함: 지속 시간 | 2/2 | - |
+| 보고에 포함: 한계 | 2/2 | 2/2 |
+| 보고에 하나 이상: ['25,000', '25000', '2만 5천'] | 2/2 | 2/2 |
+| 보고에 하나 이상: ['SYN'] | 2/2 | 2/2 |
+| 보고에 하나 이상: ['가용성', '서비스 거부', '지연'] | 2/2 | 2/2 |
+| 스킬 사용: ncs-log-12-analysis | 2/2 | 2/2 |
+
+- V1: 피해 예상 형식 지정: '가용성 영향 / 업무 영향 / 지속 시간' 세 항목.
+  예상 차이: 같은 판정에서 보고서 구조만 바뀐다.
+# SOC-04 방화벽 허용 5초 뒤 IPS BOF 탐지 — 상관분석과 공격 동향
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| V1 | 2 | 1.00 | ncs-log-11-check(2), ncs-log-12-analysis(2), ncs-log-22-correlation(2) |
+| base | 2 | 1.00 | ncs-log-11-check(2), ncs-log-12-analysis(2), ncs-log-22-correlation(2) |
+
+| 검사 | V1 | base |
+|---|---|---|
+| 도구 호출: incident_history | 2/2 | 2/2 |
+| 도구 호출: log_read | 2/2 | 2/2 |
+| 보고에 포함: 결론 | 2/2 | 2/2 |
+| 보고에 포함: 근거 | 2/2 | 2/2 |
+| 보고에 포함: 정탐 | 2/2 | 2/2 |
+| 보고에 포함: 한계 | 2/2 | 2/2 |
+| 보고에 하나 이상: ['10.20.40.20', 'ERP'] | 2/2 | 2/2 |
+| 보고에 하나 이상: ['5초'] | 2/2 | 2/2 |
+| 보고에 하나 이상: ['Initial Access', 'Impact', 'Execution'] | 2/2 | - |
+| 보고에 하나 이상: ['지속'] | 2/2 | 2/2 |
+| 스킬 사용: ncs-log-22-correlation | 2/2 | 2/2 |
+
+- V1: 침해 시나리오 단계에 MITRE ATT&CK 전술 이름을 붙이게 한다.
+  예상 차이: 타임라인의 단계 이름 체계가 NCS 서술형에서 ATT&CK 전술로 바뀐다.
+student@lab:~/aixieis2$

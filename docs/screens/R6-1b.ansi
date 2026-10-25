@@ -1,0 +1,63 @@
+student@lab:~/aixieis2$ python3 docs/screens/excerpt.py SB-01 base 1 12
+[실행] experiments/results/SB-01/base/20261025-123027-r1/
+[도구 순서] policy_docs → asset_inventory → host_config → host_config → host_config(no_data) → change_prepare → change_prepare → change_prepare → chan
+ge_prepare → approval_request → approval_request → approval_request → approval_request
+[변경 요청서] status=ok kind=host target=db-main (10.20.40.50, zone int, 중요도 상)
+  spec: /etc/ssh/sshd_config: PermitRootLogin yes → PermitRootLogin no. 변경 후 sshd -t 문법 검사, 통과 시 sshd 재시작. 적용 전 sshd_config
+      백업.
+  reason: 조직 표준: root 원격 접속 제한. 현재값 host_config(db-main, sshd_config) PermitRootLogin=yes 확인. 스킬 ncs-sysbuild-21-implement 계정 관리
+      항목(root 원격 접속 제한: PermitRootLogin no, sshd 재시작).
+  test_plan: 1) sshd -t 통과 2) root 직접 ssh 접속 거부 확인 3) 일반 관리 계정 ssh 접속 및 sudo 정상 4) host_config(sshd_config)로 PermitRootLogin no
+재조회
+  rollback: 백업한 sshd_config 복원 후 sshd 재시작. 적용 전 관리 세션 1개를 열어 둔 상태에서 작업하고, 다른 관리자 계정(일반 계정 + sudo)으로 접속 가
+능한지 먼저 확인.
+  evidence_refs: ['host_config db-main sshd_config (PermitRootLogin: yes)', 'asset_inventory db-main']
+  note: 변경 요청서를 준비했습니다. 아직 적용되지 않았습니다.
+[변경 요청서] status=ok kind=host target=db-main (10.20.40.50, zone int, 중요도 상)
+  spec: /etc/login.defs: PASS_MIN_DAYS 0 → 1 (최소 사용 기간 1일)
+  reason: 조직 표준: 비밀번호 최소 사용 기간 1일. 현재값 host_config(login.defs) PASS_MIN_DAYS=0 확인. 스킬 패스워드 관리 항목(최소 사용 기간).
+  test_plan: 1) login.defs 문법 확인 2) host_config(login.defs) 재조회로 PASS_MIN_DAYS=1 확인 3) 신규 계정 생성 시 chage -l 값 확인(테스트 계정은 시험
+ 후 삭제)
+  rollback: login.defs 백업 파일로 복원. 기존 계정 값(chage -l)은 이 변경으로 바뀌지 않음.
+  evidence_refs: ['host_config db-main login.defs (PASS_MIN_DAYS: 0)']
+  note: 변경 요청서를 준비했습니다. 아직 적용되지 않았습니다.
+[변경 요청서] status=ok kind=host target=db-main (10.20.40.50, zone int, 중요도 상)
+  spec: /etc/login.defs: PASS_MAX_DAYS 99999 → 90 (최대 사용 기간 90일)
+  reason: 조직 표준: 비밀번호 최대 사용 기간 90일. 현재값 host_config(login.defs) PASS_MAX_DAYS=99999 확인. 스킬 패스워드 관리 항목(최대 사용 기간).
+  test_plan: 1) 문법 확인 2) host_config(login.defs) 재조회로 PASS_MAX_DAYS=90 확인 3) 기존 계정 만료일 영향 검토: 적용 시 기존 계정의 만료 기한이 앞
+당겨질 수 있으므로 chage
+      -l 대상 목록을 적용 전에 수집하고 사용자 공지를 함께 계획
+  rollback: login.defs 백업 파일로 복원.
+  evidence_refs: ['host_config db-main login.defs (PASS_MAX_DAYS: 99999)']
+  note: 변경 요청서를 준비했습니다. 아직 적용되지 않았습니다.
+[변경 요청서] status=ok kind=host target=db-main (10.20.40.50, zone int, 중요도 상)
+  spec: 최소 길이 8: /etc/login.defs PASS_MIN_LEN 5 → 8. 배포판 PAM(pam_pwquality 또는 pam_unix)에서 실제 강제되는지 확인 후, 필요 시 minlen=8을 PAM
+      설정에 추가하는 것을 별도 항목으로 검토.
+  reason: 조직 표준: 비밀번호 최소 길이 8. 현재값 host_config(login.defs) PASS_MIN_LEN=5 확인. host_config(pam) 조회 결과가 없어(no_data) PAM에서의 실
+제 강제
+      여부는 확인 불가. 스킬 패스워드 관리 항목(최소 길이).
+  test_plan: 1) login.defs PASS_MIN_LEN=8 재조회 2) 시험 계정으로 7자 이하 패스워드 변경 시도 → 거부 확인(PAM 강제 여부 검증) 3) 8자 이상 허용 확인 4)
+ 시험 계정 삭제
+  rollback: /etc/login.defs를 적용 전 백업본으로 복원. PAM 파일을 나중에 수정하는 경우 그 파일도 적용 전 백업본으로 복원.
+  evidence_refs: ['host_config db-main login.defs (PASS_MIN_LEN: 5)', 'host_config db-main pam: no_data (확인 불가)']
+  note: 변경 요청서를 준비했습니다. 아직 적용되지 않았습니다.
+[approval_request] status=ok C-6b63ea 승인 요청을 남겼습니다. 승인자가 결정하기 전에는 적용할 수 없습니다.
+[approval_request] status=ok C-819258 승인 요청을 남겼습니다. 승인자가 결정하기 전에는 적용할 수 없습니다.
+[approval_request] status=ok C-ec390f 승인 요청을 남겼습니다. 승인자가 결정하기 전에는 적용할 수 없습니다.
+[approval_request] status=ok C-45cf4d 승인 요청을 남겼습니다. 승인자가 결정하기 전에는 적용할 수 없습니다.
+[게이트 거절] mcp__lab__change_prepare ['R1 원복 방법(=rollback)이 비어 있습니다']
+[answer.md]
+  ## 결론
+  db-main의 조직 표준 4개 항목을 변경 요청서 4건(C-6b63ea, C-819258, C-ec390f, C-45cf4d)으로 준비하고 승인을 요청했습니다(A-9358e1,
+    A-abbd8a, A-fcb616, A-6824dc, 모두 pending). 아직 아무것도 적용하지 않았습니다. 현재 값은 4개 항목 모두 표준에 미달합니다.
+
+  | 항목 | 현재 값 | 목표 | 요청서 |
+  |---|---|---|---|
+  | root 원격 접속 제한 | PermitRootLogin yes | no | C-6b63ea |
+  | 최소 사용 기간 | PASS_MIN_DAYS 0 | 1 | C-819258 |
+  | 최대 사용 기간 | PASS_MAX_DAYS 99999 | 90 | C-ec390f |
+  | 최소 길이 | PASS_MIN_LEN 5 | 8 | C-45cf4d |
+
+  ## 근거
+  - 사용 스킬: `ncs-sysbuild-21-implement` (계정 관리 pp.49-51, 패스워드 관리 pp.51-53 항목을 따름)
+student@lab:~/aixieis2$

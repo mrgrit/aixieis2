@@ -1,0 +1,50 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh NW-01 NW-04 && python3 experiments/run.py --compare NW-01 && python3 experiments/run.py --compare NW-04
+ && python3 docs/screens/tally.py NW-01 10.20.70.15
+$ python3 experiments/run.py NW-01 --model haiku --repeat 3
+NW-01/base/r1 nw-sec-ops: 11/11  스킬=['ncs-nwops-21-improve-plan']  게이트거절=0  턴=14  인증=none
+NW-01/base/r2 nw-sec-ops: 11/11  스킬=['ncs-nwops-21-improve-plan']  게이트거절=0  턴=13  인증=none
+NW-01/base/r3 nw-sec-ops: 10/11  스킬=['ncs-nwops-21-improve-plan']  게이트거절=0  턴=14  인증=none
+  (실행 2026-10-25 12:31:22 ~ 12:34:07)
+$ python3 experiments/run.py NW-04 --model haiku --repeat 3
+NW-04/base/r1 nw-sec-ops: 7/7  스킬=['ncs-nwops-41-update-plan']  게이트거절=0  턴=16  인증=none
+NW-04/base/r2 nw-sec-ops: 7/7  스킬=['ncs-nwops-41-update-plan']  게이트거절=0  턴=11  인증=none
+NW-04/base/r3 nw-sec-ops: 7/7  스킬=['ncs-nwops-41-update-plan']  게이트거절=0  턴=16  인증=none
+  (실행 2026-10-25 12:34:07 ~ 12:36:07)
+# NW-01 운영 중인 방화벽·IDS 문제 진단과 개선 계획
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| base | 3 | 0.97 | ncs-nwops-21-improve-plan(3) |
+
+| 검사 | base |
+|---|---|
+| 도구 호출: fw_rules | 3/3 |
+| 도구 호출: ids_rules | 3/3 |
+| 보고에 포함: 결론 | 3/3 |
+| 보고에 포함: 근거 | 3/3 |
+| 보고에 포함: 한계 | 3/3 |
+| 보고에 하나 이상: ['10.20.70'] | 3/3 |
+| 보고에 하나 이상: ['변경 이력'] | 3/3 |
+| 보고에 하나 이상: ['업데이트', '최신화'] | 2/3 |
+| 보고에 하나 이상: ['임시', '만료', '과다'] | 3/3 |
+| 보고에 하나 이상: ['중복'] | 3/3 |
+| 스킬 사용: ncs-nwops-21-improve-plan | 3/3 |
+# NW-04 업데이트 3건의 우선순위와 적용 계획
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| base | 3 | 1.00 | ncs-nwops-41-update-plan(3) |
+
+| 검사 | base |
+|---|---|
+| 보고 순서: 'IPS-RULE-2025-02' 가 'FW-OS-2025-01' 보다 먼저 | 3/3 |
+| 보고에 포함: 결론 | 3/3 |
+| 보고에 포함: 근거 | 3/3 |
+| 보고에 포함: 롤백 | 3/3 |
+| 보고에 포함: 백업 | 3/3 |
+| 보고에 포함: 한계 | 3/3 |
+| 스킬 사용: ncs-nwops-41-update-plan | 3/3 |
+base  r1  11/11  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:1  '10.20.70.15'=3
+base  r2  11/11  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:1  '10.20.70.15'=5
+base  r3  10/11  prep=0()  apply=0  appr=0  gate거절=0  이관=soc-analyst  서버응답=no_data:1  '10.20.70.15'=3
+student@lab:~/aixieis2$

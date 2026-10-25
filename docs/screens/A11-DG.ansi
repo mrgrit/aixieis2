@@ -1,0 +1,75 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh DG-01 DG-02 DG-03 DG-04 DG-05 && python3 experiments/run.py --compare DG-03 && python3 experiments/run.
+py --compare DG-05
+$ python3 experiments/run.py DG-01 --model haiku --repeat 2
+DG-01/base/r1 diag-consultant: 6/9  스킬=['ncs-diag-11-prepare']  게이트거절=0  턴=13  인증=none
+DG-01/base/r2 diag-consultant: 9/9  스킬=['ncs-diag-11-prepare']  게이트거절=0  턴=10  인증=none
+  (실행 2026-10-25 12:44:04 ~ 12:45:12)
+$ python3 experiments/run.py DG-02 --model haiku --repeat 2
+DG-02/base/r1 diag-consultant: 9/9  스킬=['ncs-diag-22-execute']  게이트거절=0  턴=20  인증=none
+DG-02/base/r2 diag-consultant: 9/9  스킬=['ncs-diag-22-execute']  게이트거절=0  턴=17  인증=none
+  (실행 2026-10-25 12:45:12 ~ 12:46:15)
+$ python3 experiments/run.py DG-03 --variant all --model haiku --repeat 2
+DG-03/base/r1 diag-consultant: 9/10  스킬=['ncs-diag-31-risk-plan']  게이트거절=0  턴=9  인증=none
+DG-03/base/r2 diag-consultant: 9/10  스킬=['ncs-diag-31-risk-plan']  게이트거절=0  턴=8  인증=none
+DG-03/S0/r1 diag-consultant: 1/2  스킬=[]  게이트거절=0  턴=11  인증=none
+DG-03/S0/r2 diag-consultant: 1/2  스킬=[]  게이트거절=0  턴=10  인증=none
+  (실행 2026-10-25 12:46:15 ~ 12:48:21)
+$ python3 experiments/run.py DG-04 --model haiku --repeat 2
+DG-04/base/r1 diag-consultant: 7/7  스킬=['ncs-diag-12-risk-method', 'ncs-diag-11-prepare']  게이트거절=0  턴=13  인증=none
+DG-04/base/r2 diag-consultant: 7/7  스킬=['ncs-diag-12-risk-method', 'ncs-diag-11-prepare']  게이트거절=0  턴=16  인증=none
+  (실행 2026-10-25 12:48:21 ~ 12:49:32)
+$ python3 experiments/run.py DG-05 --variant all --model haiku --repeat 2
+DG-05/base/r1 diag-consultant: 12/12  스킬=['ncs-diag-21-method', 'ncs-diag-22-execute']  게이트거절=0  턴=24  인증=none
+DG-05/base/r2 diag-consultant: 12/12  스킬=['ncs-diag-22-execute', 'ncs-diag-21-method']  게이트거절=0  턴=29  인증=none
+DG-05/N0/r1 diag-consultant: 12/12  스킬=['ncs-diag-21-method', 'ncs-diag-22-execute']  게이트거절=0  턴=30  인증=none
+DG-05/N0/r2 diag-consultant: 12/12  스킬=['ncs-diag-21-method', 'ncs-diag-22-execute']  게이트거절=0  턴=30  인증=none
+  (실행 2026-10-25 12:49:32 ~ 12:52:23)
+# DG-03 위험 처리 유형과 조치 기간
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| S0 | 2 | 0.50 |  |
+| base | 2 | 0.90 | ncs-diag-31-risk-plan(2) |
+
+| 검사 | S0 | base |
+|---|---|---|
+| 보고에 포함: 결론 | - | 2/2 |
+| 보고에 포함: 근거 | - | 2/2 |
+| 보고에 포함: 수용 | - | 2/2 |
+| 보고에 포함: 장기 | - | 2/2 |
+| 보고에 포함: 즉시 | - | 2/2 |
+| 보고에 포함: 한계 | - | 2/2 |
+| 보고에 하나 이상: ['1년'] | - | 2/2 |
+| 보고에 하나 이상: ['7일'] | - | 2/2 |
+| 보고에 하나 이상: ['수용'] | 2/2 | - |
+| 보고에 하나 이상: ['장기', '중장기', '1년'] | 0/2 | - |
+| 보고에 하나 이상: ['접근 통제', 'IP 제한', '접근을 제한'] | - | 0/2 |
+| 스킬 사용: ncs-diag-31-risk-plan | - | 2/2 |
+
+- S0: 스킬 폴더 전체 제거. 모델의 일반 지식과 CLAUDE.md만으로 일한다.
+  예상 차이: 스킬이 없어도 유형은 맞힐 수 있다. 차이는 기간 기준: 학습모듈의 '즉시 7일·단기 3개월·중기 6개월·장기 1년 이상'이 그대로 나오는지 본다.
+# DG-05 대상 3대 × 항목 다수 — 빠짐없이 진단
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| N0 | 2 | 1.00 | ncs-diag-21-method(2), ncs-diag-22-execute(2) |
+| base | 2 | 1.00 | ncs-diag-21-method(2), ncs-diag-22-execute(2) |
+
+| 검사 | N0 | base |
+|---|---|---|
+| 도구 호출: host_accounts | 2/2 | 2/2 |
+| 도구 호출: host_config | 2/2 | 2/2 |
+| 보고에 포함: adminconsole | 2/2 | 2/2 |
+| 보고에 포함: db-main | 2/2 | 2/2 |
+| 보고에 포함: neobank | 2/2 | 2/2 |
+| 보고에 포함: 결론 | 2/2 | 2/2 |
+| 보고에 포함: 근거 | 2/2 | 2/2 |
+| 보고에 포함: 취약 | 2/2 | 2/2 |
+| 보고에 포함: 한계 | 2/2 | 2/2 |
+| 보고에 하나 이상: ['644'] | 2/2 | 2/2 |
+| 보고에 하나 이상: ['finger'] | 2/2 | 2/2 |
+| 보고에 하나 이상: ['telnet'] | 2/2 | 2/2 |
+
+- N0: 확장 스킬 x-diag-task-tree 제거(NCS 스킬만으로 일한다).
+  예상 차이: 확장 스킬이 있으면 evidence/diag-tree.md 를 만들고 미완료 항목을 한계에 옮긴다. N0에서 누락 항목 수를 비교한다.
+student@lab:~/aixieis2$

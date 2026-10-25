@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ python3 experiments/run.py --compare APP-05 && python3 docs/screens/tally.py APP-05
+# APP-05 게시판 정상 글이 942100에 막힌다 — 가장 좁은 예외
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| N0 | 3 | 1.00 | ncs-appops-32-recovery-docs(3) |
+| base | 3 | 1.00 | x-crs-fp-tuning(3) |
+
+| 검사 | N0 | base |
+|---|---|---|
+| 변경 요청서 spec 에 'comment' | 3/3 | 3/3 |
+| 변경 요청서 항목: rollback | 3/3 | 3/3 |
+| 변경 요청서 항목: test_plan | 3/3 | 3/3 |
+| 변경 종류: ['waf'] | 3/3 | 3/3 |
+| 보고에 포함: 결론 | 3/3 | 3/3 |
+| 보고에 포함: 근거 | 3/3 | 3/3 |
+| 보고에 포함: 한계 | 3/3 | 3/3 |
+| 보고에 하나 이상: ['ARGS:comment', 'comment 변수', 'comment 파라미터'] | 3/3 | 3/3 |
+
+- N0: 확장 스킬 x-crs-fp-tuning 제거(NCS 스킬만으로 일한다).
+  예상 차이: 확장 스킬이 없으면 942100 규칙 전체 제거(SecRuleRemoveById)나 경로 전체 예외 같은 넓은 조치를 제안하는지 본다. ARGS:title 의 실제 공격이
+계속 막히는지가 핵심.
+N0  r1  8/8  prep=2(waf)  apply=0  appr=1  gate거절=0  이관=sw-sec-dev,soc-analyst  서버응답=no_data:3,role_boundary:1
+N0  r2  8/8  prep=2(waf)  apply=0  appr=0  gate거절=1  이관=-  서버응답=no_data:2,no_match:1,role_boundary:1
+N0  r3  8/8  prep=2(waf)  apply=0  appr=0  gate거절=1  이관=-  서버응답=no_data:6,no_match:1,role_boundary:1
+base  r1  8/8  prep=1(waf)  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:3
+base  r2  8/8  prep=1(waf)  apply=0  appr=1  gate거절=0  이관=-  서버응답=no_data:3
+base  r3  8/8  prep=1(waf)  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:2
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+
+
+

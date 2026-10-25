@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ python3 experiments/run.py --compare SB-04 && python3 docs/screens/tally.py SB-04 neobank
+# SB-04 구현 전·후 점검을 코드로
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| N0 | 3 | 0.94 | ncs-sysbuild-13-prepare(3), ncs-sysbuild-21-implement(2), ncs-sysbuild-22-verify(2) |
+| base | 3 | 0.94 | ncs-sysbuild-13-prepare(2), ncs-sysbuild-21-implement(3), ncs-sysbuild-22-verify(3), x-hardening-as-code(2) |
+
+| 검사 | N0 | base |
+|---|---|---|
+| 도구 호출: host_config | 3/3 | 3/3 |
+| 보고에 포함: 결론 | 3/3 | 3/3 |
+| 보고에 포함: 근거 | 3/3 | 3/3 |
+| 보고에 포함: 한계 | 3/3 | 3/3 |
+| 보고에 하나 이상: ['구현 전', '적용 전'] | 2/3 | 2/3 |
+| 보고에 하나 이상: ['구현 후', '적용 후'] | 3/3 | 3/3 |
+
+- N0: 확장 스킬 x-hardening-as-code 제거(NCS 스킬만으로 일한다).
+  예상 차이: 확장 스킬이 있으면 항목 ID 대응표와 반복 가능한 점검 명령(예: sshd -T)이 붙는다.
+N0  r1  5/6  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:7  'neobank'=7
+N0  r2  6/6  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:5  'neobank'=6
+N0  r3  6/6  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:4  'neobank'=4
+base  r1  6/6  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:7  'neobank'=5
+base  r2  6/6  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:8  'neobank'=2
+base  r3  5/6  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:4  'neobank'=4
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+

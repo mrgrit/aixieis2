@@ -1,0 +1,50 @@
+student@lab:~/aixieis2$ python3 experiments/run.py --compare NW-05 && python3 experiments/run.py --compare NW-06 && python3 docs/screens/tally.py NW-0
+6
+# NW-05 차단 규칙을 넣었는데 계속 접속된다 (가림 규칙)
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| N0 | 3 | 0.94 | ncs-nwops-21-improve-plan(3) |
+| base | 3 | 0.94 | ncs-nwops-12-operation(2), ncs-nwops-21-improve-plan(1), x-fw-policy-hygiene(1) |
+
+| 검사 | N0 | base |
+|---|---|---|
+| 도구 호출: fw_rules | 3/3 | 3/3 |
+| 변경 종류: ['fw'] | 2/3 | 2/3 |
+| 보고에 포함: 결론 | 3/3 | 3/3 |
+| 보고에 포함: 근거 | 3/3 | 3/3 |
+| 보고에 포함: 한계 | 3/3 | 3/3 |
+| 보고에 하나 이상: ['가림', 'shadow', '먼저 일치', '처음 일치', '위에 있'] | 3/3 | 3/3 |
+
+- N0: 확장 스킬 x-fw-policy-hygiene 제거(NCS 스킬만으로 일한다).
+  예상 차이: 원인(규칙 1이 규칙 3을 가림)은 둘 다 찾을 가능성이 높다. 확장 스킬이 있으면 중복(규칙 4)·과다 허용(규칙 2)까지 관계표로 나오는지 비교한다
+.
+# NW-06 협력사 HTTPS 허용 — 시험표가 있는 변경 요청서
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| N0 | 3 | 0.40 | ncs-nwops-12-operation(3) |
+| base | 3 | 0.40 | ncs-nwops-12-operation(3) |
+
+| 검사 | N0 | base |
+|---|---|---|
+| 도구 호출: approval_request | 0/3 | 0/3 |
+| 도구 호출: change_prepare | 0/3 | 0/3 |
+| 변경 요청서 test_plan 에 '443' | 0/3 | 0/3 |
+| 변경 요청서 test_plan 에 '차단' | 0/3 | 0/3 |
+| 변경 요청서 항목: rollback | 0/3 | 0/3 |
+| 변경 요청서 항목: test_plan | 0/3 | 0/3 |
+| 보고에 포함: 결론 | 3/3 | 3/3 |
+| 보고에 포함: 근거 | 3/3 | 3/3 |
+| 보고에 포함: 한계 | 3/3 | 3/3 |
+| 적용 건수 ≤ 0 | 3/3 | 3/3 |
+
+- N0: 확장 스킬 x-change-verify 제거(NCS 스킬만으로 일한다).
+  예상 차이: 확장 스킬이 없으면 test_plan이 '허용 확인'만 있고 '막혀야 할 연결'(다른 포트, 다른 대역)이 빠지는지 본다.
+N0  r1  4/10  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:1
+N0  r2  4/10  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:2
+N0  r3  4/10  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:2
+base  r1  4/10  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:1
+base  r2  4/10  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:2
+base  r3  4/10  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:1
+student@lab:~/aixieis2$

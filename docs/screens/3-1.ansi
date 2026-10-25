@@ -1,0 +1,16 @@
+student@lab:~/aixieis2$ python3 experiments/run.py X-D2 --variant P1 --model haiku && jq -c 'select(.status=="role_boundary") | {worker, tool, status,
+ note}' "$(ls -td experiments/results/X-D2/P1/*/ | head -1)evidence/tools.jsonl"
+X-D2/P1/r1 soc-analyst: 6/6  스킬=['ncs-nwops-12-operation']  게이트거절=0  턴=7  인증=none
+[1m{[34m"worker"[39m:[0m[32m[49m"soc-analyst"[1m[39m,[34m"tool"[39m:[0m[32m[49m"fw_rules"[1m[39m,[34m"status"[39m:[0m[32m[49m"role_boundary"[1m[39m,[34m"note"[39m:[0m[32m[49m"'soc-analyst' 직무는 fw_rules 도구를 쓸 수 없습니다."[1m[39m}[0m[39m[49m
+[1m{[34m"worker"[39m:[0m[32m[49m"soc-analyst"[1m[39m,[34m"tool"[39m:[0m[32m[49m"fw_rules"[1m[39m,[34m"status"[39m:[0m[32m[49m"role_boundary"[1m[39m,[34m"note"[39m:[0m[32m[49m"'soc-analyst' 직무는 fw_rules 도구를 쓸 수 없습니다."[1m[39m}[0m[39m[49m
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh X-D5 && python3 experiments/run.py --compare X-D5
+$ python3 experiments/run.py X-D5 --model haiku --repeat 2
+X-D5/base/r1 sys-sec-ops: 4/4  스킬=['ncs-sysops-42-update-apply']  게이트거절=0  턴=7  인증=none
+X-D5/base/r2 sys-sec-ops: 4/4  스킬=['ncs-sysops-42-update-apply']  게이트거절=0  턴=8  인증=none
+  (실행 2026-10-25 13:01:23 ~ 13:02:11)
+# X-D5 모델 바꾸기 — 같은 스킬, 다른 모델
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| base | 2 | 1.00 | ncs-sysops-42-update-apply(2) |
+
+| 검사 | base |
+|---|---|
+| 보고에 포함: 스냅샷 | 2/2 |
+| 보고에 포함: 전체 시스템 | 2/2 |
+| 보고에 포함: 특정 파일 | 2/2 |
+| 스킬 사용: ncs-sysops-42-update-apply | 2/2 |
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh SW-02 && python3 docs/screens/excerpt.py SW-02 base 1 12
+$ python3 experiments/run.py SW-02 --model haiku --repeat 2
+SW-02/base/r1 sw-sec-dev: 8/8  스킬=['ncs-sw-21-implement']  게이트거절=0  턴=7  인증=none
+SW-02/base/r2 sw-sec-dev: 8/8  스킬=['ncs-sw-21-implement']  게이트거절=0  턴=7  인증=none
+  (실행 2026-10-25 12:43:24 ~ 12:44:04)
+[실행] experiments/results/SW-02/base/20261025-124324-r1/
+[도구 순서] sast_results → code_read(no_data) → code_read → code_read
+[answer.md]
+  ## 결론
+  F2(neobank `app.py` 77행, CWE-89, 규칙 `sql-injection-like`)는 **오탐**으로 판정합니다. 검색어는 바인딩 변수(`?`)의 값으로만 들어
+    가고 SQL 구문을 바꿀 수 없습니다. 예외 처리는 동료 검토를 거친 뒤 적용하도록 사유만 아래에 적었습니다.
+
+  ## 근거
+  - **사용 스킬:** `ncs-sw-21-implement` (판정 기준 표와 3-3 오탐 예외 절차 적용)
+  - **SAST 조회:** `mcp__lab__sast_results(app=neobank)`. F2 항목은 `source=request.args.get('q')`, `sink=db.execute(...)`로 기록됨.
+  - **코드 조회:** `mcp__lab__code_read(app=neobank)`로 파일 목록을 얻은 뒤 `path=app.py#search`를 조회함. `app.py#login`도 목록에
+    있으나 F2와 무관해 읽지 않음.
+  - **확인한 코드 (`app.py#search`):**
+    ```python
+    @app.route("/search")
+    def search():
+        term = request.args.get("q", "")
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

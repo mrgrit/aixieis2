@@ -1,0 +1,68 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh NW-07 && python3 experiments/run.py --compare NW-07 && python3 docs/screens/excerpt.py NW-07 base 1 12
+$ python3 experiments/run.py NW-07 --model haiku --repeat 3
+NW-07/base/r1 nw-sec-ops: 10/10  스킬=['ncs-nwops-31-threat-block']  게이트거절=3  턴=22  인증=none
+NW-07/base/r2 nw-sec-ops: 10/10  스킬=['ncs-nwops-31-threat-block']  게이트거절=0  턴=17  인증=none
+NW-07/base/r3 nw-sec-ops: 10/10  스킬=['ncs-nwops-31-threat-block']  게이트거절=1  턴=19  인증=none
+  (실행 2026-10-25 12:28:30 ~ 12:31:22)
+# NW-07 스위치 관리 포트 비인가 접근과 내부 PC 점거
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| base | 3 | 1.00 | ncs-nwops-31-threat-block(3) |
+
+| 검사 | base |
+|---|---|
+| 변경 요청서 항목: evidence_refs | 3/3 |
+| 변경 요청서 항목: rollback | 3/3 |
+| 변경 종류: ['fw'] | 3/3 |
+| 보고에 포함: 결론 | 3/3 |
+| 보고에 포함: 근거 | 3/3 |
+| 보고에 포함: 한계 | 3/3 |
+| 보고에 하나 이상: ['ACL'] | 3/3 |
+| 보고에 하나 이상: ['관리망', '관리자 전용'] | 3/3 |
+| 보고에 하나 이상: ['로그 전송'] | 3/3 |
+| 스킬 중 하나 사용: ['ncs-nwops-31-threat-block', 'ncs-nwops-32-recovery-docs'] | 3/3 |
+[실행] experiments/results/NW-07/base/20261025-122830-r1/
+[도구 순서] fw_rules → network_topology → log_read(no_data) → log_read → log_read(role_boundary) → log_read(role_boundary) → asset_inventory → ids_rul
+es(no_data) → policy_docs(no_data) → worker_directory → change_list → change_prepare → approval_request → worker_directory → handoff_request → handoff
+_request
+[변경 요청서] status=ok kind=fw target=fw policy - block 10.20.40.33 to switch 10.20.40.2 mgmt ports (insert top)
+  spec: New rule 1: src=10.20.40.33/32 dst=10.20.40.2/32 proto=tcp dport=22,23 action=drop comment="CHG block compromised PC
+      mgmt ports". New rule 2: src=10.20.40.33/32 dst=10.20.40.2/32 proto=udp dport=69 action=drop comment="CHG block
+      compromised PC TFTP". Insert both above current rule 1. Do not modify or delete rules 1-6. Scope is limited to
+      10.20.40.2, the destination confirmed in IPS logs; other switch IPs are not in the asset inventory and are excluded
+      …
+  reason: IPS log (ips, 2026-10-18 13:10 and 13:12 +09:00): Telnet login attempt (tcp/23) and TFTP config download attempt
+      (udp/69), src 10.20.40.33 to dst 10.20.40.2. The analysis report from the SOC describes the compromised PC. fw_rules
+      show no rule blocking 10.20.40.33. fw log for this IP returned no_data.</reason> /
+  test_plan: 1) Record the baseline with fw_rules (6 rules) before apply. 2) After apply, confirm with fw_rules that the 2 new
+      rules are at positions 1 and 2. 3) Check ips logs for further attempts from 10.20.40.33 to 10.20.40.2 on tcp/23 and
+      udp/69 (baseline 2). 4) Confirm rule 1 (any to 10.20.32.80 tcp 80,443) is unchanged.
+  rollback: Delete the two new rules (src 10.20.40.33 dst 10.20.40.2 tcp 22,23 and udp 69 drop). Existing rules 1-6 are untouched,
+      so the policy returns to the baseline of 6 rules.
+  evidence_refs: ['ips log_read source=ips filter=10.20.40.33 (2 rows)', 'fw_rules (rules 1-6)', 'network_topology (int
+      10.20.40.0/24)', 'fw log_read source=fw filter=10.20.40.33 returned no_data']
+  note: 변경 요청서를 준비했습니다. 아직 적용되지 않았습니다.
+[approval_request] status=ok C-7c1164 승인 요청을 남겼습니다. 승인자가 결정하기 전에는 적용할 수 없습니다.
+[handoff_request] status=ok soc-analyst
+[handoff_request] status=ok cert-coordinator
+[게이트 거절] mcp__lab__change_prepare ['R1 원복 방법(=rollback)이 비어 있습니다']
+[게이트 거절] mcp__lab__change_prepare ['R1 원복 방법(=rollback)이 비어 있습니다']
+[게이트 거절] mcp__lab__change_prepare ['R1 시험 계획(=test_plan)이 비어 있습니다']
+[answer.md]
+  ## 결론
+  점거 의심 PC 10.20.40.33 → 스위치 10.20.40.2의 관리 포트(tcp 22·23, udp 69) 차단 변경 C-7c1164를 준비했고 승인 요청(A-4c8e50)을 남
+    겼습니다. 승인 대기 상태이며 **아직 적용하지 않았습니다.** 이 차단은 스위치 접근 한 경로만 막습니다. PC 격리, 스위치 ACL 복구,
+    로그 전송 오류는 다른 담당의 처리가 필요합니다.
+
+  ## 근거
+  - **스킬**: `ncs-nwops-31-threat-block` (절차 1~5, 표 3-1 내/외부 점검 항목)
+  - **fw_rules**: 규칙 1~6 조회. 10.20.40.33을 막는 규칙이 없습니다. 규칙 3(`10.20.30.0/24 → 10.20.40.0/24, any`, "임시 허용 2025-06
+    , 만료 미정")은 ext→int 전체 포트를 열어 두고 있어 별도 검토가 필요합니다. 이번 변경에서는 건드리지 않았습니다.
+  - **ips log_read (filter 10.20.40.33)**: 2건 확인.
+    - 2026-10-18 13:10 Telnet 로그인 시도 (dst 10.20.40.2, tcp/23)
+    - 2026-10-18 13:12 TFTP 설정 다운로드 시도 (dst 10.20.40.2, udp/69)
+    - **관제 보고의 SSH 22 접근은 IPS에서 확인되지 않았습니다.**
+  - **fw log_read (filter 10.20.40.33)**: no_data. 방화벽 측 기록이 없습니다.
+  - **host·auth log_read**: 직무 범위 밖(nw-sec-ops는 fw/ips/vpn만 읽음)으로 조회하지 못했습니다. 점거 여부는 확인하지 않았습니다.
+student@lab:~/aixieis2$

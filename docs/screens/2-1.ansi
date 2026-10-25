@@ -1,0 +1,12 @@
+student@lab:~/aixieis2/org$ bin/check
+
+참고:
+   auditor: 서버는 허용하지만 에이전트에 안 준 도구 ['asset_inventory', 'handoff_request', 'policy_docs', 'ticket_create']
+   ciso: 서버는 허용하지만 에이전트에 안 준 도구 ['asset_inventory', 'handoff_request', 'policy_docs']
+   researcher: 서버는 허용하지만 에이전트에 안 준 도구 ['asset_inventory', 'handoff_request', 'policy_docs', 'ticket_create']
+   service-desk: 서버는 허용하지만 에이전트에 안 준 도구 ['policy_docs']
+에이전트 13, 스킬 66 (NCS 50, 확장 11), 문제 0
+student@lab:~/aixieis2/org$
+
+
+

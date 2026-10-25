@@ -1,0 +1,61 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh NB-01 && python3 docs/screens/excerpt.py NB-01 base 1 30
+$ python3 experiments/run.py NB-01 --variant all --model haiku --repeat 3
+NB-01/base/r1 nw-sec-build: 8/8  스킬=['ncs-nwbuild-12-design']  게이트거절=0  턴=9  인증=none
+NB-01/base/r2 nw-sec-build: 8/8  스킬=['ncs-nwbuild-12-design']  게이트거절=0  턴=7  인증=none
+NB-01/base/r3 nw-sec-build: 8/8  스킬=['ncs-nwbuild-12-design']  게이트거절=0  턴=8  인증=none
+NB-01/V1/r1 nw-sec-build: 8/8  스킬=['ncs-nwbuild-12-design']  게이트거절=0  턴=8  인증=none
+NB-01/V1/r2 nw-sec-build: 8/8  스킬=['ncs-nwbuild-12-design']  게이트거절=0  턴=9  인증=none
+NB-01/V1/r3 nw-sec-build: 8/8  스킬=['ncs-nwbuild-12-design']  게이트거절=0  턴=8  인증=none
+  (실행 2026-10-25 12:23:39 ~ 12:28:03)
+[실행] experiments/results/NB-01/base/20261025-122339-r1/
+[도구 순서] network_topology → fw_rules(no_data) → asset_inventory → policy_docs(no_data) → change_prepare → approval_request
+[변경 요청서] status=ok kind=network-design target=KT66 fw(10.20.30.1)·ips(10.20.31.2)·web WAF(10.20.32.80) 구간 접근제어 정책표 (ext|pipe|dmz|int)
+  spec: 정책은 번호 순 적용, 첫 일치 적용.  / 1. ext(Any) → dmz web 10.20.32.80 TCP 80,443 ALLOW (요구 ①; 응답은 상태기반 허용) / 2. dmz web
+      10.20.32.80 → int db-main 10.20.40.50 TCP 3306(MySQL 기본값, 실제 설정 확인) ALLOW (요구 ②) / 2a. dmz web 10.20.32.80 → int 업무앱
+      10.20.40.11-14 TCP [앱 포트 확인] ALLOW (요구 밖 추가: WAF 경유 구조상 필요, 확인 필요) / 3. admin-pc 10.20.40.200 → dev-net 10.20.45.0/24
+      및 운영 서버 IP 목록 TCP 22 ALLOW (요구 ③; 운영 서버 IP는 자산대장에 없어 확인 필요) / 4. fw 10.20.30.1, ips 10.20.31.2, web 10.20.32.80, db-
+      …
+  reason: 요구 ①–⑤를 KT66 존(ext·pipe·dmz·int·app·ot)에 대응. network_topology(존·경로), asset_inventory(IP) 조회 결과 근거.
+      fw_rules·policy_docs는 조회 결과 없음(확인 불가).
+  test_plan: T1 ext→web 443 허용 / T2 ext→web 22 차단 / T3 ext→db 3306 차단 / T4 web→db 3306 허용 / T5 web→db 22 차단 / T6 admin-pc→22 허용 /
+      T7 타 IP→22 차단 / T8 dmz·int→ext 신규 연결 차단 / T9 fw·ips·web·db→SIEM 514 허용 / T10 ext→Any 최종 차단 확인
+  rollback: 설계 단계로 미적용. 적용 시 이전 nftables 룰셋 백업본으로 원복.
+  evidence_refs: ['mcp__lab__network_topology', 'mcp__lab__asset_inventory', 'mcp__lab__fw_rules(no_data)',
+      'mcp__lab__policy_docs(no_data)', 'skill: ncs-nwbuild-12-design']
+  note: 변경 요청서를 준비했습니다. 아직 적용되지 않았습니다.
+[approval_request] status=ok C-f005ce 승인 요청을 남겼습니다. 승인자가 결정하기 전에는 적용할 수 없습니다.
+[answer.md]
+  ## 결론
+
+  요구사항 ①–⑤를 번호 순으로 적용하는 정책표(9행, 첫 일치 적용)를 설계했고, 변경 요청 `C-f005ce`(승인 요청 `A-97989f`, 대기 중)로 올
+    렸습니다. 아직 적용하지 않았습니다. 현재 방화벽 룰셋과 내부 정책 문서는 조회되지 않아 기존 룰과의 충돌은 **확인 불가**입니다.
+
+  ## 정책표 (KT66 존 기준, 번호 순 적용)
+
+  | 번호 | 요구 | 출발 | 목적 | 프로토콜/포트 | 동작 |
+  |---|---|---|---|---|---|
+  | 1 | ① | ext (10.20.30.0/24) | dmz web 10.20.32.80 | TCP 80, 443 | 허용 (응답은 상태기반 허용) |
+  | 2 | ② | dmz web 10.20.32.80 | int db-main 10.20.40.50 | TCP 3306 (MySQL 기본값, 실제 설정 확인) | 허용 |
+  | 2a | 요구 밖, 추가 | dmz web 10.20.32.80 | int 업무앱 10.20.40.11–14 | TCP [앱 포트 확인] | 허용 (WAF 경유 구조상 필요) |
+  | 3 | ③ | admin-pc 10.20.40.200 | dev-net 10.20.45.0/24, 운영 서버 IP 목록 | TCP 22 | 허용 |
+  | 4 | ④ | fw 10.20.30.1, ips 10.20.31.2, web, db-main, 업무앱 | siem 10.20.32.10 | syslog UDP 514 또는 SIEM 수집 포트 | 허용 |
+  | 5 | ⑤ | ext (Any) | Any | Any | 거부 |
+  | 6 | ⑤ | dmz, int, app, pipe | ext (Any) | 신규 연결 | 거부 (예외는 승인번호가 있는 것만 추가) |
+  | 7 | 존 설명 | int ↔ ot | ot | TCP 8000, ICMP | 허용 (출발·목적 IP 확인 필요) |
+  | 8 | 기본 | Any | Any | Any | 거부 (로그 기록) |
+
+  - 자료의 방화벽 예시 "syslog UDP 513"은 표준 514와 다르므로 옮기지 않았습니다. 513은 rlogin 계열입니다.
+  - 1번 규칙의 응답 트래픽은 상태 기반으로 허용하고, 6번 규칙은 신규 연결만 막습니다.
+
+  ## 근거
+
+  - 스킬: `ncs-nwbuild-12-design` (구간 분리, 번호 순 정책표, KT66 대응 절차)
+  - `mcp__lab__network_topology`: 존 ext·pipe·dmz·int·app·ot·mgmt, 경로 `ext → fw → pipe → ips → dmz(web=WAF) → int`. int는 WAF 경유
+    만 허용, ot는 tcp/8000·ICMP만 허용.
+  - `mcp__lab__asset_inventory`: web 10.20.32.80(WAF), siem 10.20.32.10(Wazuh, dmz), db-main 10.20.40.50, neobank·govportal·mediforu
+    m·adminconsole 10.20.40.11–14, admin-pc 10.20.40.200, dev-net 10.20.45.0/24, fw 10.20.30.1, ips 10.20.31.2.
+  - `mcp__lab__fw_rules`: no_data (현재 룰 확인 불가)
+  - `mcp__lab__policy_docs`(filter=방화벽): no_data (내부 기준 확인 불가)
+  - `mcp__lab__change_prepare`: `C-f005ce`, state=prepared, kind=network-design, 미적용
+  - `mcp__lab__approval_request`: `A-97989f`, state=pending
+student@lab:~/aixieis2$

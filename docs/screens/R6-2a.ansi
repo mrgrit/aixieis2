@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ docs/screens/replay.sh SB-02 && python3 experiments/run.py --compare SB-02
+$ python3 experiments/run.py SB-02 --model haiku --repeat 3
+SB-02/base/r1 sys-sec-build: 9/9  스킬=['ncs-sysbuild-11-requirements']  게이트거절=0  턴=8  인증=none
+SB-02/base/r2 sys-sec-build: 9/9  스킬=['ncs-sysbuild-11-requirements']  게이트거절=0  턴=7  인증=none
+SB-02/base/r3 sys-sec-build: 9/9  스킬=['ncs-sysbuild-11-requirements']  게이트거절=0  턴=6  인증=none
+  (실행 2026-10-25 12:32:09 ~ 12:33:15)
+# SB-02 계정 관리·비밀번호 보안요구사항 정의
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| base | 3 | 1.00 | ncs-sysbuild-11-requirements(3) |
+
+| 검사 | base |
+|---|---|
+| 보고에 포함: 결론 | 3/3 |
+| 보고에 포함: 공용 | 3/3 |
+| 보고에 포함: 근거 | 3/3 |
+| 보고에 포함: 기본 계정 | 3/3 |
+| 보고에 포함: 재사용 | 3/3 |
+| 보고에 포함: 한계 | 3/3 |
+| 보고에 하나 이상: ['최초', '임시 비밀번호'] | 3/3 |
+| 보고에 하나 이상: ['퇴직', '인사'] | 3/3 |
+| 스킬 사용: ncs-sysbuild-11-requirements | 3/3 |
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ docs/screens/r31b.sh
+## 20261025-114228-r1
+ 1. Skill(ncs-sw-21-implement)
+ 2. sast_results(neobank)
+ 3. code_read(app.py)
+ 4. code_read(neobank)
+ 5. code_read(app.py#login)
+ 6. code_read(app.py#search)
+ 7. change_prepare(code)
+## 20261025-114257-r2
+ 1. Skill(ncs-sw-21-implement)
+ 2. sast_results(neobank)
+ 3. code_read(app.py)
+ 4. Grep(request\.form\['username'\]|request\.args\.get\('q'\))
+ 5. Glob(**/app.py)
+ 6. code_read(neobank)
+ 7. code_read(app.py#login)
+ 8. code_read(app.py#search)
+ 9. change_prepare(code)
+## 20261025-114328-r3
+ 1. Skill(ncs-sw-21-implement)
+ 2. sast_results(neobank)
+ 3. code_read(app.py)
+ 4. code_read(neobank)
+ 5. code_read(app.py#login)
+ 6. code_read(app.py#search)
+ 7. change_prepare(code)
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+
+
+
+

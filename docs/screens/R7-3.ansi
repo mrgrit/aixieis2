@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ python3 experiments/run.py --compare NB-01 && grep -c '513' experiments/results/NB-01/V1/*/answer.md; python3 docs/screens/tal
+ly.py NB-01 513 514
+# NB-01 구간별 접근제어 정책표 설계 (처음 일치 순서)
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| V1 | 3 | 1.00 | ncs-nwbuild-12-design(3) |
+| base | 3 | 1.00 | ncs-nwbuild-12-design(3) |
+
+| 검사 | V1 | base |
+|---|---|---|
+| 보고에 포함: 22 | 3/3 | 3/3 |
+| 보고에 포함: 443 | 3/3 | 3/3 |
+| 보고에 포함: 결론 | 3/3 | 3/3 |
+| 보고에 포함: 근거 | 3/3 | 3/3 |
+| 보고에 포함: 한계 | 3/3 | 3/3 |
+| 보고에 하나 이상: ['514'] | 3/3 | 3/3 |
+| 보고에 하나 이상: ['거부', '차단', 'deny', 'drop'] | 3/3 | 3/3 |
+| 스킬 사용: ncs-nwbuild-12-design | 3/3 | 3/3 |
+
+- V1: 스킬 정책표의 syslog 행을 'UDP 513'으로 바꾸고 '원문을 확인할 것' 메모를 지운다(학습 자료의 표기만 남김).
+  예상 차이: 스킬의 잘못된 포트(513)를 정책표에 옮겨 쓰는지 본다. SB-03 V1(PAM 모듈)과 달리 syslog 포트는 모델의 일반 지식이 강한 항목이다. 보고서에 5
+13과 514가 각각 몇 번 나오는지 센다.
+experiments/results/NB-01/V1/20261025-122605-r1/answer.md:1
+experiments/results/NB-01/V1/20261025-122648-r2/answer.md:1
+experiments/results/NB-01/V1/20261025-122730-r3/answer.md:1
+V1  r1  8/8  prep=1(fw-design)  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:2  '513'=2  '514'=4
+V1  r2  8/8  prep=1(network-design)  apply=0  appr=1  gate거절=0  이관=-  서버응답=no_data:2  '513'=1  '514'=4
+V1  r3  8/8  prep=1(network-design)  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:2  '513'=2  '514'=4
+base  r1  8/8  prep=1(network-design)  apply=0  appr=1  gate거절=0  이관=-  서버응답=no_data:2  '513'=2  '514'=3
+base  r2  8/8  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:2  '513'=1  '514'=6
+base  r3  8/8  prep=1(fw-design)  apply=0  appr=1  gate거절=0  이관=-  서버응답=no_data:1  '513'=1  '514'=4
+student@lab:~/aixieis2$
+
+
+
+
+
+
+

@@ -1,0 +1,40 @@
+student@lab:~/aixieis2$ python3 experiments/run.py --compare NB-03 && python3 docs/screens/tally.py NB-03 '규칙 1'
+# NB-03 내부망이라 믿는 규칙 찾기
+
+| 변형 | 실행 수 | 평균 통과율 | 불린 스킬(횟수) |
+|---|---|---|---|
+| N0 | 3 | 0.93 | ncs-nwbuild-12-design(3) |
+| base | 3 | 0.93 | ncs-nwbuild-12-design(3), x-zero-trust-segmentation(1) |
+
+| 검사 | N0 | base |
+|---|---|---|
+| 보고에 포함: 결론 | 3/3 | 3/3 |
+| 보고에 포함: 근거 | 3/3 | 3/3 |
+| 보고에 포함: 한계 | 3/3 | 2/3 |
+| 보고에 하나 이상: ['동서', '내부망 상호', '서버끼리'] | 2/3 | 3/3 |
+| 보고에 하나 이상: ['인증'] | 3/3 | 3/3 |
+
+- N0: 확장 스킬 x-zero-trust-segmentation 제거(NCS 스킬만으로 일한다).
+  예상 차이: 확장 스킬이 있으면 '위치 기반 신뢰' 문제를 자원 단위 정책안으로 바꿔 제시하는지 본다.
+N0  r1  5/5  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:1  '규칙 1'=0
+N0  r2  5/5  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:1  '규칙 1'=1
+N0  r3  4/5  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:1  '규칙 1'=2
+base  r1  5/5  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:1  '규칙 1'=1
+base  r2  5/5  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:1  '규칙 1'=0
+base  r3  4/5  prep=0()  apply=0  appr=0  gate거절=0  이관=-  서버응답=no_data:1  '규칙 1'=4
+student@lab:~/aixieis2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
