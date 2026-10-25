@@ -149,6 +149,9 @@ def run_once(path, scen, variant, rep, model, dry, live=False):
         calls, answer, meta = check.load_transcript(sdir)
         if meta.get("api_key_source") not in (None, "none"):
             raise SystemExit(f"중단: API 키({meta['api_key_source']})로 실행됐습니다. 구독 로그인(claude /login)으로만 실행합니다.")
+        if meta.get("lab") != "connected":
+            # 랩 서버 없이 돈 실행은 채점할 수 없다(예: -p 기본 동작이 바뀌어 .mcp.json을 읽지 않은 경우).
+            raise SystemExit(f"중단: 랩 서버(lab)가 연결되지 않았습니다(상태={meta.get('lab')}). {sdir}/transcript.jsonl 의 init 을 확인하세요.")
         sc = check.score(expect, calls, answer, check.lab_status(sdir))
         sc["meta"] = meta
         sc["gate_denials"] = sum(1 for g in check.gate_log(sdir) if g.get("decision") == "deny")

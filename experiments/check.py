@@ -37,6 +37,10 @@ def load_transcript(run_dir):
         elif r.get("type") == "system" and r.get("subtype") == "init":
             meta["api_key_source"] = r.get("apiKeySource")
             meta["model"] = r.get("model")
+            meta["claude_code_version"] = r.get("claude_code_version")
+            meta["permission_mode"] = r.get("permissionMode")
+            meta["lab"] = next((m.get("status") for m in r.get("mcp_servers") or [] if m.get("name") == "lab"), None)
+            meta["ncs_skills"] = sum(1 for s in r.get("skills") or [] if str(s).startswith("ncs-"))
         elif r.get("type") == "result":
             answer = r.get("result") or ""
             meta.update({"turns": r.get("num_turns"), "duration_ms": r.get("duration_ms"),
