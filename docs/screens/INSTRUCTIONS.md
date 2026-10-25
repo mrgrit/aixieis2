@@ -28,6 +28,7 @@ python3 -m pip install --user ansi2html playwright
 python3 -m playwright install --with-deps chromium
 env | grep -E 'ANTHROPIC_(API_KEY|AUTH_TOKEN)' && echo "중단: API 키 변수가 있다"
 (cd org && bin/check)                            # 마지막 줄: 에이전트 13, 스킬 66 (NCS 50, 확장 11), 문제 0
+test -f .claude/settings.local.json && cat .claude/settings.local.json   # 있으면 그 허용 규칙이 모든 실행에 들어간다. 내용을 REPORT.md에 적는다
 ```
 
 `claude`가 구독 계정으로 로그인돼 있어야 한다(`claude` 실행 후 `/status`로 확인, 필요하면 `/login`).
